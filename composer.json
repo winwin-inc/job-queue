@@ -1,0 +1,26 @@
+{
+    "name": "winwin/job-queue",
+    "type": "project",
+    "require": {
+        "php": ">= 5.6",
+        "pda/pheanstalk": "^3.1",
+        "symfony/event-dispatcher": "^3.2",
+        "container-interop/container-interop": "^1.1"
+    },
+    "require-dev": {
+        "kuiper/test-helper": "^0.1",
+        "winwin/composer-phpcs-plugin": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "winwin\\jobQueue\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "winwin\\jobQueue\\": "tests/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
