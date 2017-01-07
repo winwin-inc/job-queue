@@ -8,8 +8,9 @@
         "container-interop/container-interop": "^1.1"
     },
     "require-dev": {
-        "kuiper/test-helper": "^0.1",
-        "winwin/composer-phpcs-plugin": "dev-master"
+        "phpunit/phpunit": "^5.0",
+        "winwin/composer-phpcs-plugin": "^0.1",
+        "vlucas/phpdotenv": "^2.4"
     },
     "autoload": {
         "psr-4": {
@@ -20,7 +21,5 @@
         "psr-4": {
             "winwin\\jobQueue\\": "tests/"
         }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    }
 }
