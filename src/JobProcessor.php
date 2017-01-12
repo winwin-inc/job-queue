@@ -260,11 +260,11 @@ class JobProcessor implements JobProcessorInterface
             } catch (\Exception $e) {
                 $event['error'] = $e;
                 $this->eventDispatcher->dispatch(Events::JOB_FAILED, $event);
-                $queue->bury($job);
+                $this->jobQueue->bury($job);
             } catch (\Error $e) {
                 $event['error'] = $e;
                 $this->eventDispatcher->dispatch(Events::JOB_FAILED, $event);
-                $queue->bury($job);
+                $this->jobQueue->bury($job);
             }
         }
         $this->eventDispatcher->dispatch(Events::WORKER_STOP, new GenericEvent($this));

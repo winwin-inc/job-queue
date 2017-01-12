@@ -39,4 +39,24 @@ class JobProcessorTest extends TestCase
             throw new \RuntimeException("Cannot fork");
         }
     }
+
+    public function testJobFail()
+    {
+        $processor = $this->createProcessor();
+
+        $pid = pcntl_fork();
+        if ($pid > 0) {
+            $this->queue->put(TestJob::class, $args = []);
+            usleep(100000);
+            $this->assertTrue(file_exists($this->pidfile));
+            $processor->stop();
+            usleep(1000000);
+            $this->assertFalse(file_exists($this->pidfile));
+        } elseif ($pid == 0) {
+            $processor->start();
+            exit;
+        } else {
+            throw new \RuntimeException("Cannot fork");
+        }
+    }
 }

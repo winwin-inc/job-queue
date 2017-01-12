@@ -26,4 +26,9 @@ interface JobQueueInterface
      * @param object $job
      */
     public function delete($job);
+
+    /**
+     * @param object $job
+     */
+    public function bury($job);
 }

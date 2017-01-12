@@ -16,7 +16,7 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
         $host = getenv('BEANSTALK_HOST') ?: 'localhost';
         $port = getenv('BEANSTALK_PORT') ?: 11300;
         $tube = getenv('BEANSTALK_TUBE') ?: 'testing';
-        $beanstalk = new \Pheanstalk\Pheanstalk($host, $port);
+        $this->beanstalk = $beanstalk = new \Pheanstalk\Pheanstalk($host, $port);
         $beanstalk->watchOnly($tube);
 
         try {

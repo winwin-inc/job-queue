@@ -66,6 +66,14 @@ class JobQueue implements JobQueueInterface
         return $this->getBeanstalk()->delete($job);
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function bury($job)
+    {
+        return $this->getBeanstalk()->bury($job);
+    }
+
     public function getBeanstalk($watch = false)
     {
         if (null === $this->beanstalk) {
