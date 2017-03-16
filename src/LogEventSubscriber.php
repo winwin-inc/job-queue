@@ -23,17 +23,20 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
             Events::AFTER_PROCESSOR_STOP => 'afterProcessorStop',
             Events::BEFORE_PROCESSOR_RELOAD => 'beforeProcessorReload',
             Events::AFTER_PROCESSOR_RELOAD => 'afterProcessorReload',
+            Events::BEFORE_SCHEDULE_JOB => 'beforeScheduleJob',
+            Events::AFTER_SCHEDULE_JOB => 'afterScheduleJob',
+            Events::SCHEDULE_JOB_FAILED => 'onScheduleJobFailed',
         ];
     }
 
     public function onWorkerStart($event)
     {
-        $this->logger->info(sprintf("[QueueWorker] start pid=%d", getmypid()));
+        $this->logger->info(sprintf("[Worker] start pid=%d", getmypid()));
     }
 
     public function onWorkerStop($event)
     {
-        $this->logger->info(sprintf("[QueueWorker] stop pid=%d", getmypid()));
+        $this->logger->info(sprintf("[Worker] stop pid=%d", getmypid()));
     }
 
     public function beforeProcessJob($event)
@@ -57,12 +60,12 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
 
     public function onProcessorStart($event)
     {
-        $this->logger->info(sprintf("[QueueProcessor] start pid=%d", getmypid()));
+        $this->logger->info(sprintf("[Processor] start pid=%d", getmypid()));
     }
 
     public function beforeProcessorStop($event)
     {
-        $this->logger->info(sprintf("[QueueProcessor] stop pid=%d", getmypid()));
+        $this->logger->info(sprintf("[Processor] stop pid=%d", getmypid()));
     }
 
     public function afterProcessorStop($event)
@@ -71,10 +74,38 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
 
     public function beforeProcessorReload($event)
     {
-        $this->logger->info(sprintf("[QueueProcessor] reload pid=%d", getmypid()));
+        $this->logger->info(sprintf("[Processor] reload pid=%d", getmypid()));
     }
 
     public function afterProcessorReload($event)
     {
+    }
+
+    public function beforeScheduleJob($event)
+    {
+        $job = $event['job'];
+        $this->logger->info(sprintf("[ScheduleWorker] process job=" . $job->getSummaryForDisplay()));
+    }
+
+    public function afterScheduleJob($event)
+    {
+        $job = $event['job'];
+        $response = $event['response'];
+        if (is_numeric($response)) {
+            if ($response == 0) {
+                $this->logger->info("[ScheduleWorker] finish job=" . $job->getSummaryForDisplay());
+            } else {
+                $this->logger->error(sprintf("[ScheduleWorker] failed job=%s ret=%d", $job->getSummaryForDisplay(), $ret));
+            }
+        } else {
+            $this->logger->info("[ScheduleWorker] finish job=" . $job->getSummaryForDisplay());
+        }
+    }
+
+    public function onScheduleJobFailed($event)
+    {
+        $job = $event['job'];
+        $error = $event['error'];
+        $this->logger->info(sprintf("[ScheduleWorker] job-failed job=%s error=%s", $job->getSummaryForDisplay(), $error));
     }
 }

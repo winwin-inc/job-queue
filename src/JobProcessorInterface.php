@@ -5,6 +5,11 @@ namespace winwin\jobQueue;
 interface JobProcessorInterface
 {
     /**
+     * @param WorkerInterface $worker
+     */
+    public function addWorker(WorkerInterface $worker);
+
+    /**
      * Starts processor
      */
     public function start();
@@ -20,7 +25,7 @@ interface JobProcessorInterface
     public function reload();
 
     /**
-     * @param int $workers
+     * Check the processor is alive
      */
-    public function setWorkers($workers);
+    public function isAlive();
 }

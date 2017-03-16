@@ -2,7 +2,7 @@
 
 namespace winwin\jobQueue;
 
-use Interop\Container\ContainerInterface;
+use Psr\Container\ContainerInterface;
 
 class JobFactory implements JobFactoryInterface
 {

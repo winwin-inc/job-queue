@@ -5,7 +5,11 @@ namespace winwin\jobQueue;
 interface JobFactoryInterface
 {
     /**
-     * @var string $jobClass
+     * Creates the job instance
+     *
+     * @param string $jobClass
+     *
+     * @return JobInterface
      */
     public function create($jobClass);
 }

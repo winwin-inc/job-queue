@@ -8,12 +8,18 @@ class JobProcessorTest extends TestCase
 {
     public function createProcessor()
     {
-        return $processor = new JobProcessor(
-            $this->queue = $this->createQueue(),
-            new SimpleJobFactory(),
-            new EventDispatcher(),
+        $processor = new JobProcessor(
+            $eventDispatcher = new EventDispatcher(),
             $this->pidfile = __DIR__.'/queue.pid'
         );
+        $worker = new JobQueueWorker(
+            $this->queue = $this->createQueue(),
+            new SimpleJobFactory(),
+            $eventDispatcher
+        );
+        $processor->addWorker($worker);
+
+        return $processor;
     }
 
     public function testStart()
