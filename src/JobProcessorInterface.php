@@ -6,8 +6,9 @@ interface JobProcessorInterface
 {
     /**
      * @param WorkerInterface $worker
+     * @param int $num
      */
-    public function addWorker(WorkerInterface $worker);
+    public function addWorker(WorkerInterface $worker, $num = 1);
 
     /**
      * Starts processor

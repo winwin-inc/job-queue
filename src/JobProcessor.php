@@ -70,9 +70,11 @@ class JobProcessor implements JobProcessorInterface
     /**
      * {@inheritdoc}
      */
-    public function addWorker(WorkerInterface $worker)
+    public function addWorker(WorkerInterface $worker, $num = 1)
     {
-        $this->workers[] = $worker;
+        foreach (range(1, $num) as $i) {
+            $this->workers[] = $worker;
+        }
 
         return $this;
     }

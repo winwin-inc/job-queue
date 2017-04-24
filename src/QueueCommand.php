@@ -19,8 +19,7 @@ class QueueCommand extends Command
     {
         $this->setDescription('Job queue control')
             ->addOption('reload', null, InputOption::VALUE_NONE, 'reload queue worker')
-            ->addOption('stop', null, InputOption::VALUE_NONE, 'stop queue worker')
-            ->addOption('workers', null, InputOption::VALUE_REQUIRED, 'worker number', 1);
+            ->addOption('stop', null, InputOption::VALUE_NONE, 'stop queue worker');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -33,7 +32,6 @@ class QueueCommand extends Command
         } elseif ($input->getOption('stop')) {
             $this->jobProcessor->stop();
         } else {
-            $this->jobProcessor->setWorkers($input->getOption('workers'));
             $this->jobProcessor->start();
         }
     }
