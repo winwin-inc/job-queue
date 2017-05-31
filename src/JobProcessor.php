@@ -238,7 +238,7 @@ class JobProcessor implements JobProcessorInterface
             case SIGUSR1:
                 $this->eventDispatcher->dispatch(Events::BEFORE_PROCESSOR_RELOAD, new GenericEvent($this));
                 $this->stopWorkers();
-                $this->eventDispatcher->dispatch(Events::BEFORE_PROCESSOR_RELOAD, new GenericEvent($this));
+                $this->eventDispatcher->dispatch(Events::AFTER_PROCESSOR_RELOAD, new GenericEvent($this));
                 break;
         }
     }
