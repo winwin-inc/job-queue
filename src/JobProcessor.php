@@ -189,17 +189,21 @@ class JobProcessor implements JobProcessorInterface
     protected function startWorkers()
     {
         foreach ($this->workers as $i => $worker) {
-            if (!isset($this->workerPids[$i])) {
-                $pid = pcntl_fork();
-                if ($pid == -1) {
-                    throw new \RuntimeException('Cannot fork queue worker');
-                } elseif ($pid) {
-                    $this->workerPids[$i] = $pid;
-                } else {
-                    $this->reinstallSignal();
-                    $this->startWorker($worker);
-                    exit;
+            if (isset($this->workerPids[$i])) {
+                $pid = $this->workerPids[$i];
+                if (posix_kill($pid, 0)) {
+                    continue;
                 }
+            }
+            $pid = pcntl_fork();
+            if ($pid == -1) {
+                throw new \RuntimeException('Cannot fork queue worker');
+            } elseif ($pid) {
+                $this->workerPids[$i] = $pid;
+            } else {
+                $this->reinstallSignal();
+                $this->startWorker($worker);
+                exit;
             }
         }
     }
