@@ -21,7 +21,7 @@ class QueueCommand extends Command
         $this->setDescription('Job queue control')
             ->addOption('reload', null, InputOption::VALUE_NONE, 'reload queue worker')
             ->addOption('stop', null, InputOption::VALUE_NONE, 'stop queue worker')
-            ->addOption('schedule', null, InputOption::VALUE_NONE, 'start schedule worker')
+            ->addOption('no-schedule', null, InputOption::VALUE_NONE, 'won\'t start schedule worker')
             ->addOption('queue-workers', null, InputOption::VALUE_REQUIRED, 'number of job queue worker', 1);
     }
 
@@ -37,7 +37,7 @@ class QueueCommand extends Command
         } elseif ($input->getOption('stop')) {
             $jobProcessor->stop();
         } else {
-            if ($input->getOption('schedule') && $this->container->has(ScheduleWorker::class)) {
+            if (!$input->getOption('no-schedule') && $this->container->has(ScheduleWorker::class)) {
                 if ($output->isVerbose()) {
                     $output->writeln("<info>Start schedule worker</>");
                 }
