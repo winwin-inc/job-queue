@@ -31,12 +31,15 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
 
     public function onWorkerStart($event)
     {
-        $this->logger->info(sprintf("[Worker] start pid=%d", getmypid()));
+        $worker = $event->getSubject();
+        cli_set_process_title("worker: " . get_class($worker));
+        $this->logger->info(sprintf("[Worker] start %s pid=%d", get_class($worker), getmypid()));
     }
 
     public function onWorkerStop($event)
     {
-        $this->logger->info(sprintf("[Worker] stop pid=%d", getmypid()));
+        $worker = $event->getSubject();
+        $this->logger->info(sprintf("[Worker] stop %s pid=%d", get_class($worker), getmypid()));
     }
 
     public function beforeProcessJob($event)
@@ -95,7 +98,8 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
             if ($response == 0) {
                 $this->logger->info("[ScheduleWorker] finish job=" . $job->getSummaryForDisplay());
             } else {
-                $this->logger->error(sprintf("[ScheduleWorker] failed job=%s ret=%d", $job->getSummaryForDisplay(), $ret));
+                $this->logger->error($message = sprintf("[ScheduleWorker] failed job=%s error=%s", $job->getSummaryForDisplay(), $response));
+                @file_put_contents($job->output, date('c') . ' ' . $message.PHP_EOL, FILE_APPEND);
             }
         } else {
             $this->logger->info("[ScheduleWorker] finish job=" . $job->getSummaryForDisplay());
@@ -106,6 +110,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
     {
         $job = $event['job'];
         $error = $event['error'];
-        $this->logger->info(sprintf("[ScheduleWorker] job-failed job=%s error=%s", $job->getSummaryForDisplay(), $error));
+        $this->logger->info($message = sprintf("[ScheduleWorker] job-failed job=%s error=%s", $job->getSummaryForDisplay(), $error));
+        @file_put_contents($job->output, date('c') . ' ' . $message.PHP_EOL, FILE_APPEND);
     }
 }

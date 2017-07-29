@@ -35,11 +35,17 @@ class ScheduleWorker extends AbstractWorker
      */
     private $mutexPath;
 
-    public function __construct(EventDispatcherInterface $eventDispatcher, $basePath, $mutexPath, $maxRequests = 100)
+    /**
+     * @var string
+     */
+    private $output;
+
+    public function __construct(EventDispatcherInterface $eventDispatcher, $basePath, $mutexPath, $output = null, $maxRequests = 100)
     {
         $this->eventDispatcher = $eventDispatcher;
         $this->basePath = $basePath;
         $this->mutexPath = $mutexPath;
+        $this->output = $output;
         $this->maxRequests = $maxRequests;
     }
 
@@ -152,6 +158,9 @@ class ScheduleWorker extends AbstractWorker
     {
         $job->basePath = $this->basePath;
         $job->mutexPath = $this->mutexPath;
+        if ($this->output) {
+            $job->appendOutputTo($this->output);
+        }
         $this->jobs[] = $job;
 
         return $job;

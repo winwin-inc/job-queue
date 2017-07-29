@@ -2,6 +2,7 @@
 
 namespace winwin\jobQueue;
 
+use Psr\Container\ContainerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -11,34 +12,56 @@ use Symfony\Component\Console\Output\OutputInterface;
 class QueueCommand extends Command
 {
     /**
-     * @var JobProcessorInterface
+     * @var ContainerInterface
      */
-    protected $jobProcessor;
+    protected $container;
 
     protected function configure()
     {
         $this->setDescription('Job queue control')
             ->addOption('reload', null, InputOption::VALUE_NONE, 'reload queue worker')
-            ->addOption('stop', null, InputOption::VALUE_NONE, 'stop queue worker');
+            ->addOption('stop', null, InputOption::VALUE_NONE, 'stop queue worker')
+            ->addOption('schedule', null, InputOption::VALUE_NONE, 'start schedule worker')
+            ->addOption('queue-workers', null, InputOption::VALUE_REQUIRED, 'number of job queue worker', 1);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        if (!$this->jobProcessor) {
+        if (!$this->container) {
             throw new RuntimeException("Job processor was not setup");
         }
+        $jobProcessor = $this->container->get(JobProcessorInterface::class);
+                      
         if ($input->getOption('reload')) {
-            $this->jobProcessor->reload();
+            $jobProcessor->reload();
         } elseif ($input->getOption('stop')) {
-            $this->jobProcessor->stop();
+            $jobProcessor->stop();
         } else {
-            $this->jobProcessor->start();
+            if ($input->getOption('schedule') && $this->container->has(ScheduleWorker::class)) {
+                if ($output->isVerbose()) {
+                    $output->writeln("<info>Start schedule worker</>");
+                }
+                $jobProcessor->addWorker($this->container->get(ScheduleWorker::class));
+            }
+            if ($this->container->has(JobQueueWorker::class)) {
+                $workers = $input->getOption('queue-workers');
+                if ($workers > 0) {
+                    if ($output->isVerbose()) {
+                        $output->writeln("<info>Start $workers job queue worker</>");
+                    }
+                    $worker = $this->container->get(JobQueueWorker::class);
+                    foreach (range(0, $workers-1) as $i) {
+                        $jobProcessor->addWorker($worker);
+                    }
+                }
+            }
+            $jobProcessor->start();
         }
     }
 
-    public function setJobProcessor(JobProcessorInterface $jobProcessor)
+    public function setContainer(ContainerInterface $container)
     {
-        $this->jobProcessor = $jobProcessor;
+        $this->container = $container;
         return $this;
     }
 }

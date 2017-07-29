@@ -226,6 +226,7 @@ class JobProcessor implements JobProcessorInterface
         pcntl_signal(SIGUSR1, SIG_IGN);
 
         pcntl_signal(SIGINT, [$this, 'workerSignalHandler']);
+        pcntl_signal(SIGUSR1, [$this, 'workerSignalHandler']);
     }
 
     public function signalHandler($signal)
@@ -241,7 +242,7 @@ class JobProcessor implements JobProcessorInterface
             // Reload.
             case SIGUSR1:
                 $this->eventDispatcher->dispatch(Events::BEFORE_PROCESSOR_RELOAD, new GenericEvent($this));
-                $this->stopWorkers();
+                $this->reloadWorkers();
                 $this->eventDispatcher->dispatch(Events::AFTER_PROCESSOR_RELOAD, new GenericEvent($this));
                 break;
         }
@@ -251,9 +252,13 @@ class JobProcessor implements JobProcessorInterface
     {
         switch ($signal) {
             // Stop.
-            case SIGINT:
-                $this->workerStopped = true;
-                break;
+        case SIGINT:
+            $this->workerStopped = true;
+            break;
+        case SIGUSR1:
+            $this->eventDispatcher->dispatch(EVENTS::WORKER_RELOAD, new GenericEvent($this));
+            $this->workerStopped = true;
+            break;
         }
     }
 
@@ -264,6 +269,13 @@ class JobProcessor implements JobProcessorInterface
                 pcntl_waitpid($workerPid, $status);
                 unset($this->workerPids[$i]);
             }
+        }
+    }
+
+    protected function reloadWorkers()
+    {
+        foreach ($this->workerPids as $i => $workerPid) {
+            posix_kill($workerPid, SIGUSR1);
         }
     }
 

@@ -8,6 +8,8 @@ abstract class Events
 
     const WORKER_STOP             = 'job_queue.worker_stop';
 
+    const WORKER_RELOAD           = 'job_queue.worker_reload';
+
     const BEFORE_PROCESS_JOB      = 'job_queue.before_process_job';
 
     const AFTER_PROCESS_JOB       = 'job_queue.after_process_job';
