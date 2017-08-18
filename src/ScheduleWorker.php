@@ -126,9 +126,11 @@ class ScheduleWorker extends AbstractWorker
             }
         }
         // skip to next minute
-        $time = time() - $startTime;
-        if ($time < 60) {
-            sleep(60 - $time);
+        $format = 'Y-m-d H:i';
+        $startMinute = date($format, $startTime);
+        $now = time();
+        if ($startMinute == date($format, $now)) {
+            sleep(strtotime($startMinute) + 60 - $now);
         }
         $this->processedJobs++;
     }
