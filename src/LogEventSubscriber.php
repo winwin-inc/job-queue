@@ -5,6 +5,7 @@ namespace winwin\jobQueue;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\EventDispatcher\GenericEvent;
 
 class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterface
 {
@@ -29,6 +30,9 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         ];
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function onWorkerStart($event)
     {
         $worker = $event->getSubject();
@@ -36,24 +40,36 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         $this->logger->info(sprintf("[Worker] start %s pid=%d", get_class($worker), getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function onWorkerStop($event)
     {
         $worker = $event->getSubject();
         $this->logger->info(sprintf("[Worker] stop %s pid=%d", get_class($worker), getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function beforeProcessJob($event)
     {
         $job = $event['job'];
         $this->logger->info(sprintf("[QueueWorker] process job={id: %d, payload: %s} pid=%d", $job->getId(), $job->getData(), getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function afterProcessJob($event)
     {
         $job = $event['job'];
         $this->logger->info(sprintf("[QueueWorker] finish job={id: %d, payload: %s} pid=%d", $job->getId(), $job->getData(), getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function onJobFailed($event)
     {
         $job = $event['job'];
@@ -61,35 +77,56 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         $this->logger->info(sprintf("[QueueWorker] job-failed job={id: %d, payload: %s} pid=%d, error=%s", $job->getId(), $job->getData(), getmypid(), $error));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function onProcessorStart($event)
     {
         $this->logger->info(sprintf("[Processor] start pid=%d", getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function beforeProcessorStop($event)
     {
         $this->logger->info(sprintf("[Processor] stop pid=%d", getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function afterProcessorStop($event)
     {
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function beforeProcessorReload($event)
     {
         $this->logger->info(sprintf("[Processor] reload pid=%d", getmypid()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function afterProcessorReload($event)
     {
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function beforeScheduleJob($event)
     {
         $job = $event['job'];
         $this->logger->info(sprintf("[ScheduleWorker] process job=" . $job->getSummaryForDisplay()));
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function afterScheduleJob($event)
     {
         $job = $event['job'];
@@ -106,6 +143,9 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         }
     }
 
+    /**
+     * @param GenericEvent $event
+     */
     public function onScheduleJobFailed($event)
     {
         $job = $event['job'];

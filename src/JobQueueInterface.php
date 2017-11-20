@@ -18,17 +18,17 @@ interface JobQueueInterface
     /**
      * @param int $timeout
      *
-     * @return object
+     * @return \Pheanstalk\Job
      */
     public function reserve($timeout = null);
 
     /**
-     * @param object $job
+     * @param \Pheanstalk\Job $job
      */
     public function delete($job);
 
     /**
-     * @param object $job
+     * @param \Pheanstalk\Job $job
      */
     public function bury($job);
 }

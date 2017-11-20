@@ -119,7 +119,6 @@ class ScheduleJob
      * Create a new event instance.
      *
      * @param  string  $command
-     * @return void
      */
     public function __construct($command)
     {
@@ -145,9 +144,9 @@ class ScheduleJob
     public function run()
     {
         if ($this->runInBackground) {
-            return $this->runCommandInBackground();
+            $this->runCommandInBackground();
         } else {
-            return $this->runCommandInForeground();
+            $this->runCommandInForeground();
         }
     }
 
@@ -160,13 +159,11 @@ class ScheduleJob
     {
         $this->callBeforeCallbacks();
 
-        $ret = (new Process(
+        (new Process(
             trim($this->buildCommand(), '& '), $this->basePath, null, null, null
         ))->run();
 
         $this->callAfterCallbacks();
-
-        return $ret;
     }
 
     /**
@@ -176,7 +173,7 @@ class ScheduleJob
      */
     protected function runCommandInBackground()
     {
-        return (new Process(
+        (new Process(
             $this->buildCommand(), $this->basePath, null, null, null
         ))->run();
     }
@@ -641,31 +638,6 @@ class ScheduleJob
     public function user($user)
     {
         $this->user = $user;
-
-        return $this;
-    }
-
-    /**
-     * Limit the environments the command should run in.
-     *
-     * @param  array|mixed  $environments
-     * @return $this
-     */
-    public function environments($environments)
-    {
-        $this->environments = is_array($environments) ? $environments : func_get_args();
-
-        return $this;
-    }
-
-    /**
-     * State that the command should run even in maintenance mode.
-     *
-     * @return $this
-     */
-    public function evenInMaintenanceMode()
-    {
-        $this->evenInMaintenanceMode = true;
 
         return $this;
     }

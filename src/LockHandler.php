@@ -116,6 +116,7 @@ class LockHandler
 
     /**
      * Release the resource.
+     * @param bool $force
      */
     public function release($force = false)
     {

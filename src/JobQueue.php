@@ -23,6 +23,11 @@ class JobQueue implements JobQueueInterface
     private $tube;
 
     /**
+     * @var string[]
+     */
+    private $watchTubes = [];
+
+    /**
      * @var PheanstalkInterface
      */
     private $beanstalk;
@@ -87,6 +92,11 @@ class JobQueue implements JobQueueInterface
             if ($this->tube) {
                 $this->beanstalk->watchOnly($this->tube);
             }
+            if (!empty($this->watchTubes)) {
+                foreach ($this->watchTubes as $tube) {
+                    $this->beanstalk->watch($tube);
+                }
+            }
             $this->watched = true;
         }
 
@@ -129,6 +139,24 @@ class JobQueue implements JobQueueInterface
     public function setTube($tube)
     {
         $this->tube = $tube;
+        return $this;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getWatchTubes()
+    {
+        return $this->watchTubes;
+    }
+
+    /**
+     * @param string[] $watchTubes
+     * @return $this
+     */
+    public function setWatchTubes(array $watchTubes)
+    {
+        $this->watchTubes = $watchTubes;
         return $this;
     }
 }

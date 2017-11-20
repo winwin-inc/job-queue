@@ -23,7 +23,6 @@ class CallbackScheduleJob extends ScheduleJob
      *
      * @param  string  $callback
      * @param  array  $parameters
-     * @return void
      *
      * @throws \InvalidArgumentException
      */

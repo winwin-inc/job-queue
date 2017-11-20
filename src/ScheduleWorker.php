@@ -64,6 +64,8 @@ class ScheduleWorker extends AbstractWorker
     /**
      * Add job to schedule
      *
+     * @param string $jobName
+     * @param array $parameters
      * @return ScheduleJob
      */
     public function job($jobName, array $parameters)
@@ -156,6 +158,10 @@ class ScheduleWorker extends AbstractWorker
         return implode(' ', $options);
     }
 
+    /**
+     * @param ScheduleJob $job
+     * @return ScheduleJob
+     */
     protected function addJob($job)
     {
         $job->basePath = $this->basePath;

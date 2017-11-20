@@ -57,10 +57,11 @@ class JobQueueWorker extends AbstractWorker
             $this->jobQueue->delete($job);
             $this->eventDispatcher->dispatch(Events::AFTER_PROCESS_JOB, $event);
             $this->processedJobs++;
+            return true;
         } catch (\Pheanstalk\Exception $e) {
             $event['error'] = $e;
             $this->eventDispatcher->dispatch(Events::JOB_FAILED, $event);
-            sleep(100);
+            sleep(10);
         } catch (\Exception $e) {
             $event['error'] = $e;
             $this->eventDispatcher->dispatch(Events::JOB_FAILED, $event);
@@ -70,5 +71,6 @@ class JobQueueWorker extends AbstractWorker
             $this->eventDispatcher->dispatch(Events::JOB_FAILED, $event);
             $this->jobQueue->bury($job);
         }
+        return false;
     }
 }

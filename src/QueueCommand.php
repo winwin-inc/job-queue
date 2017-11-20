@@ -39,7 +39,7 @@ class QueueCommand extends Command
         } else {
             if (!$input->getOption('no-schedule') && $this->container->has(ScheduleWorker::class)) {
                 if ($output->isVerbose()) {
-                    $output->writeln("<info>Start schedule worker</>");
+                    $output->writeln("<info>Start schedule worker</info>");
                 }
                 $jobProcessor->addWorker($this->container->get(ScheduleWorker::class));
             }
@@ -47,7 +47,7 @@ class QueueCommand extends Command
                 $workers = $input->getOption('queue-workers');
                 if ($workers > 0) {
                     if ($output->isVerbose()) {
-                        $output->writeln("<info>Start $workers job queue worker</>");
+                        $output->writeln("<info>Start $workers job queue worker</info>");
                     }
                     $worker = $this->container->get(JobQueueWorker::class);
                     foreach (range(0, $workers-1) as $i) {

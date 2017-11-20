@@ -155,6 +155,7 @@ class JobProcessor implements JobProcessorInterface
         if (is_file($this->pidfile)) {
             return (int) file_get_contents($this->pidfile);
         }
+        return -1;
     }
 
     /**
