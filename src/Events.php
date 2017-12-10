@@ -31,4 +31,8 @@ abstract class Events
     const AFTER_SCHEDULE_JOB = 'job_queue.after_schedule_job';
 
     const SCHEDULE_JOB_FAILED = 'job_queue.schedule_job_failed';
+
+    const LOCK_CREATED = 'job_queue.lock_created';
+
+    const LOCK_RELEASED = 'job_queue.lock_released';
 }

@@ -64,7 +64,7 @@ class JobProcessor implements JobProcessorInterface
 
         $this->eventDispatcher = $eventDispatcher;
         $this->pidfile = $pidfile;
-        $this->lock = new LockHandler(md5($pidfile), $heartbeatInterval);
+        $this->lock = new LockHandler(md5($pidfile), $heartbeatInterval, dirname($pidfile));
     }
 
     /**
@@ -113,6 +113,7 @@ class JobProcessor implements JobProcessorInterface
             $this->stopWorkers();
         }
         $this->lock->release();
+        $this->eventDispatcher->dispatch(Events::LOCK_RELEASED, new GenericEvent($this->lock));
         unlink($this->pidfile);
     }
 
@@ -164,6 +165,7 @@ class JobProcessor implements JobProcessorInterface
     protected function checkProcess()
     {
         if ($this->lock->lock(false)) {
+            $this->eventDispatcher->dispatch(Events::LOCK_CREATED, new GenericEvent($this->lock));
             $this->lastHeartbeatTime = time();
             $pid = $this->getPid();
             if ($pid > 0 && posix_kill($pid, 0)) {

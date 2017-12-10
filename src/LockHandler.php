@@ -38,6 +38,11 @@ class LockHandler
         $this->file = sprintf('%s/sf.%s.%s.lock', $lockPath, preg_replace('/[^a-z0-9\._-]+/i', '-', $name), hash('sha256', $name));
     }
 
+    public function getFile()
+    {
+        return $this->file;
+    }
+
     /**
      * Lock the resource.
      *
@@ -124,6 +129,7 @@ class LockHandler
             flock($this->handle, LOCK_UN | LOCK_NB);
             fclose($this->handle);
             $this->handle = null;
+            unlink($this->file);
         } elseif ($force) {
             unlink($this->file);
         }

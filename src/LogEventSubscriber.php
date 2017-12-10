@@ -27,6 +27,8 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
             Events::BEFORE_SCHEDULE_JOB => 'beforeScheduleJob',
             Events::AFTER_SCHEDULE_JOB => 'afterScheduleJob',
             Events::SCHEDULE_JOB_FAILED => 'onScheduleJobFailed',
+            Events::LOCK_CREATED => 'onLockCreated',
+            Events::LOCK_RELEASED => 'onLockReleased',
         ];
     }
 
@@ -152,5 +154,17 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         $error = $event['error'];
         $this->logger->info($message = sprintf("[ScheduleWorker] job-failed job=%s error=%s", $job->getSummaryForDisplay(), $error));
         @file_put_contents($job->output, date('c') . ' ' . $message.PHP_EOL, FILE_APPEND);
+    }
+
+    public function onLockCreated($event)
+    {
+        $lock = $event->getSubject();
+        $this->logger->info(sprintf("[Processor] create lock %s", $lock->getFile()));
+    }
+
+    public function onLockReleased($event)
+    {
+        $lock = $event->getSubject();
+        $this->logger->info(sprintf("[Processor] release lock %s", $lock->getFile()));
     }
 }
