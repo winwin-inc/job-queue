@@ -827,7 +827,17 @@ class ScheduleJob
     }
 
     /**
-     * Get the Cron expression for the event.
+     * Gets the command for the event.
+     *
+     * @return string
+     */
+    public function getCommand()
+    {
+        return $this->command;
+    }
+
+    /**
+     * Gets the Cron expression for the event.
      *
      * @return string
      */

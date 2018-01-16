@@ -26,6 +26,8 @@ abstract class Events
 
     const AFTER_PROCESSOR_RELOAD  = 'job_queue.after_processor_reload';
 
+    const SCHEDULE_JOB_ADDED = 'job_queue.schedule_job_added';
+
     const BEFORE_SCHEDULE_JOB = 'job_queue.before_schedule_job';
 
     const AFTER_SCHEDULE_JOB = 'job_queue.after_schedule_job';

@@ -170,6 +170,7 @@ class ScheduleWorker extends AbstractWorker
             $job->appendOutputTo($this->output);
         }
         $this->jobs[] = $job;
+        $this->eventDispatcher->dispatch(Events::SCHEDULE_JOB_ADDED, new GenericEvent($job));
 
         return $job;
     }
