@@ -10,7 +10,7 @@ use Symfony\Component\EventDispatcher\GenericEvent;
 class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
-    
+
     public static function getSubscribedEvents()
     {
         return [
@@ -41,6 +41,12 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         $worker = $event->getSubject();
         cli_set_process_title("worker: " . get_class($worker));
         $this->logger->info(sprintf("[Worker] start %s pid=%d", get_class($worker), getmypid()));
+        if ($worker instanceof ScheduleWorker) {
+            foreach ($worker->getJobs() as $job) {
+                /** @var ScheduleJob $job */
+                $this->logger->info(sprintf("[ScheduleWorker] schedule command '%s' with '%s'", $job->getCommand(), $job->getExpression()));
+            }
+        }
     }
 
     /**
@@ -139,7 +145,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
                 $this->logger->info("[ScheduleWorker] finish job=" . $job->getSummaryForDisplay());
             } else {
                 $this->logger->error($message = sprintf("[ScheduleWorker] failed job=%s error=%s", $job->getSummaryForDisplay(), $response));
-                @file_put_contents($job->output, date('c') . ' ' . $message.PHP_EOL, FILE_APPEND);
+                @file_put_contents($job->output, date('c') . ' ' . $message . PHP_EOL, FILE_APPEND);
             }
         } else {
             $this->logger->info("[ScheduleWorker] finish job=" . $job->getSummaryForDisplay());
@@ -154,7 +160,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         $job = $event['job'];
         $error = $event['error'];
         $this->logger->info($message = sprintf("[ScheduleWorker] job-failed job=%s error=%s", $job->getSummaryForDisplay(), $error));
-        @file_put_contents($job->output, date('c') . ' ' . $message.PHP_EOL, FILE_APPEND);
+        @file_put_contents($job->output, date('c') . ' ' . $message . PHP_EOL, FILE_APPEND);
     }
 
     /**
@@ -162,9 +168,6 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
      */
     public function onScheduleJobAdded($event)
     {
-        /** @var ScheduleJob $job */
-        $job = $event->getSubject();
-        $this->logger->info(sprintf("[ScheduleWorker] schedule command '%s' with '%s'", $job->getCommand(), $job->getExpression()));
     }
 
     /**
