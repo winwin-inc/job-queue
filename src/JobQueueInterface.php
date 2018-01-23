@@ -26,11 +26,15 @@ interface JobQueueInterface
 
     /**
      * @param \Pheanstalk\Job|int $job
+     *
+     * @return bool
      */
     public function delete($job);
 
     /**
      * @param \Pheanstalk\Job $job
+     *
+     * @return bool
      */
     public function bury($job);
 }

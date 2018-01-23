@@ -2,6 +2,7 @@
 
 namespace winwin\jobQueue;
 
+use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Pheanstalk;
 use Pheanstalk\PheanstalkInterface;
 
@@ -68,10 +69,15 @@ class JobQueue implements JobQueueInterface
      */
     public function delete($job)
     {
-        if (!is_object($job)) {
-            $job = $this->getBeanstalk()->peek($job);
+        try {
+            if (!is_object($job)) {
+                $job = $this->getBeanstalk()->peek($job);
+            }
+            $this->getBeanstalk()->delete($job);
+            return true;
+        } catch (ServerException $e) {
+            return false;
         }
-        return $this->getBeanstalk()->delete($job);
     }
 
     /**
