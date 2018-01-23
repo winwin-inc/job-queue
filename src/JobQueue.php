@@ -49,7 +49,7 @@ class JobQueue implements JobQueueInterface
      */
     public function put($jobClass, array $payload, $delay = 0, $priority = 1024, $ttr = 60)
     {
-        $this->getBeanstalk()->put(json_encode([
+        return $this->getBeanstalk()->put(json_encode([
             'job' => $jobClass,
             'payload' => $payload,
         ]), $priority, $delay, $ttr);
@@ -68,6 +68,9 @@ class JobQueue implements JobQueueInterface
      */
     public function delete($job)
     {
+        if (!is_object($job)) {
+            $job = $this->getBeanstalk()->peek($job);
+        }
         return $this->getBeanstalk()->delete($job);
     }
 
