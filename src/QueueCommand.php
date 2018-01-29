@@ -2,12 +2,14 @@
 
 namespace winwin\jobQueue;
 
+use Pheanstalk\Job;
 use Psr\Container\ContainerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class QueueCommand extends Command
 {
@@ -25,6 +27,11 @@ class QueueCommand extends Command
             ->addOption('queue-workers', null, InputOption::VALUE_REQUIRED, 'number of job queue worker', 1);
     }
 
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @throws \Psr\Container\ContainerExceptionInterface
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         if (!$this->container) {
@@ -49,9 +56,19 @@ class QueueCommand extends Command
                     if ($output->isVerbose()) {
                         $output->writeln("<info>Start $workers job queue worker</info>");
                     }
-                    $worker = $this->container->get(JobQueueWorker::class);
-                    foreach (range(0, $workers-1) as $i) {
-                        $jobProcessor->addWorker($worker);
+                    $jobQueue = $this->container->get(JobQueueInterface::class);
+                    if ($jobQueue instanceof JobQueueCluster) {
+                        foreach ($jobQueue->getJobQueueList() as $queue) {
+                            $worker = new JobQueueWorker($queue, $this->container->get(JobFactoryInterface::class), $this->container->get(EventDispatcherInterface::class));
+                            foreach (range(0, $workers-1) as $i) {
+                                $jobProcessor->addWorker($worker);
+                            }
+                        }
+                    } else {
+                        $worker = $this->container->get(JobQueueWorker::class);
+                        foreach (range(0, $workers-1) as $i) {
+                            $jobProcessor->addWorker($worker);
+                        }
                     }
                 }
             }

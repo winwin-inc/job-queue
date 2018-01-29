@@ -44,7 +44,8 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         if ($worker instanceof ScheduleWorker) {
             foreach ($worker->getJobs() as $job) {
                 /** @var ScheduleJob $job */
-                $this->logger->info(sprintf("[ScheduleWorker] schedule command '%s' with '%s'", $job->getCommand(), $job->getExpression()));
+                $this->logger->info(sprintf("[ScheduleWorker] schedule command '%s' with '%s'",
+                    $job->getCommand() ?: $job->description, $job->getExpression()));
             }
         }
     }

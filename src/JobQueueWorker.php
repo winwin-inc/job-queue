@@ -2,6 +2,7 @@
 
 namespace winwin\jobQueue;
 
+use Pheanstalk\Exception;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\GenericEvent;
 
@@ -32,7 +33,14 @@ class JobQueueWorker extends AbstractWorker
 
     public function work()
     {
-        $job = $this->jobQueue->reserve(1);
+        try {
+            $job = $this->jobQueue->reserve(1);
+        } catch (Exception $e) {
+            $event = new GenericEvent($this->jobQueue);
+            $event['error'] = $e;
+            $this->eventDispatcher->dispatch(Events::SERVER_ERROR, $event);
+            sleep(1);
+        }
         if (!$job) {
             return true;
         }
@@ -48,7 +56,7 @@ class JobQueueWorker extends AbstractWorker
             }
             $consumer = $this->jobFactory->create($data['job']);
             if (!$consumer instanceof JobInterface) {
-                throw new \UnexpectedValueException("job {$data['job']} does not implement ".JobInterface::class);
+                throw new \UnexpectedValueException("job {$data['job']} does not implement " . JobInterface::class);
             }
             $event['consumer'] = $consumer;
             $event['payload'] = $data['payload'];

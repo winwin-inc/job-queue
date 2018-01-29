@@ -21,11 +21,6 @@ class ScheduleWorker extends AbstractWorker
     private $eventDispatcher;
 
     /**
-     * @var JobQueueInterface
-     */
-    private $jobQueue;
-
-    /**
      * @var string
      */
     private $basePath;
@@ -59,26 +54,6 @@ class ScheduleWorker extends AbstractWorker
     public function call($callback, array $parameters = [])
     {
         return $this->addJob($job = new CallbackScheduleJob($callback, $parameters));
-    }
-
-    /**
-     * Add job to schedule
-     *
-     * @param string $jobName
-     * @param array $parameters
-     * @return ScheduleJob
-     */
-    public function job($jobName, array $parameters)
-    {
-        if ($this->jobQueue === null) {
-            throw new \LogicException("jobQueue is null, call setJobQueue() method first");
-        }
-        $job = new CallbackScheduleJob(function () use ($jobName, $parameters) {
-            $this->jobQueue->put($jobName, $parameters);
-        });
-        $job->description = $jobName;
-
-        return $this->addJob($job);
     }
 
     /**
@@ -183,11 +158,5 @@ class ScheduleWorker extends AbstractWorker
     public function getJobs()
     {
         return $this->jobs;
-    }
-
-    public function setJobQueue(JobQueueInterface $jobQueue)
-    {
-        $this->jobQueue = $jobQueue;
-        return $this;
     }
 }
