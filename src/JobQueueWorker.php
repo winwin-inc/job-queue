@@ -23,6 +23,11 @@ class JobQueueWorker extends AbstractWorker
      */
     private $eventDispatcher;
 
+    /**
+     * @var int
+     */
+    private $sleepInterval = 1;
+
     public function __construct(JobQueueInterface $jobQueue, JobFactoryInterface $jobFactory, EventDispatcherInterface $eventDispatcher, $maxRequests = 100)
     {
         $this->jobQueue = $jobQueue;
@@ -33,14 +38,7 @@ class JobQueueWorker extends AbstractWorker
 
     public function work()
     {
-        try {
-            $job = $this->jobQueue->reserve(1);
-        } catch (Exception $e) {
-            $event = new GenericEvent($this->jobQueue);
-            $event['error'] = $e;
-            $this->eventDispatcher->dispatch(Events::SERVER_ERROR, $event);
-            sleep(1);
-        }
+        $job = $this->grabJob();
         if (!$job) {
             return true;
         }
@@ -80,5 +78,23 @@ class JobQueueWorker extends AbstractWorker
             $this->jobQueue->bury($job);
         }
         return false;
+    }
+
+    private function grabJob()
+    {
+        try {
+            $job = $this->jobQueue->reserve(1);
+            $this->sleepInterval = 1;
+            return $job;
+        } catch (Exception $e) {
+            $event = new GenericEvent($this->jobQueue);
+            $event['error'] = $e;
+            $this->eventDispatcher->dispatch(Events::SERVER_ERROR, $event);
+            if ($this->sleepInterval < 64) {
+                $this->sleepInterval *= 2;
+            }
+            sleep($this->sleepInterval);
+            return false;
+        }
     }
 }

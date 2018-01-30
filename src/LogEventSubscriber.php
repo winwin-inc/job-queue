@@ -19,6 +19,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
             Events::BEFORE_PROCESS_JOB => 'beforeProcessJob',
             Events::AFTER_PROCESS_JOB => 'afterProcessJob',
             Events::JOB_FAILED => 'onJobFailed',
+            Events::SERVER_ERROR => 'onServerError',
             Events::PROCESSOR_START => 'onProcessorStart',
             Events::BEFORE_PROCESSOR_STOP => 'beforeProcessorStop',
             Events::AFTER_PROCESSOR_STOP => 'afterProcessorStop',
@@ -85,6 +86,15 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         $job = $event['job'];
         $error = $event['error'];
         $this->logger->info(sprintf("[QueueWorker] job-failed job={id: %d, payload: %s} pid=%d, error=%s", $job->getId(), $job->getData(), getmypid(), $error));
+    }
+
+    /**
+     * @param GenericEvent $event
+     */
+    public function onServerError($event)
+    {
+        $error = $event['error'];
+        $this->logger->info(sprintf("[QueueWorker] server-error pid=%d, error=%s", getmypid(), $error->getMessage()));
     }
 
     /**
