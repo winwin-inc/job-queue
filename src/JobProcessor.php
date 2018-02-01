@@ -25,6 +25,11 @@ class JobProcessor implements JobProcessorInterface
     /**
      * @var int
      */
+    private $heartbeatInterval = 60;
+
+    /**
+     * @var int
+     */
     private $lastHeartbeatTime;
 
     /**
@@ -47,7 +52,7 @@ class JobProcessor implements JobProcessorInterface
      */
     private $workers;
 
-    public function __construct(EventDispatcherInterface $eventDispatcher, $pidfile, $heartbeatInterval = 60)
+    public function __construct(EventDispatcherInterface $eventDispatcher, $pidfile)
     {
         if (strpos(strtolower(PHP_OS), 'win') === 0) {
             throw new \RuntimeException("This application not support windows");
@@ -63,8 +68,7 @@ class JobProcessor implements JobProcessorInterface
         }
 
         $this->eventDispatcher = $eventDispatcher;
-        $this->pidfile = $pidfile;
-        $this->lock = new LockHandler(md5($pidfile), $heartbeatInterval, dirname($pidfile));
+        $this->setPidfile($pidfile);
     }
 
     /**
@@ -112,8 +116,8 @@ class JobProcessor implements JobProcessorInterface
         } catch (\Exception $e) {
             $this->stopWorkers();
         }
-        $this->lock->release();
-        $this->eventDispatcher->dispatch(Events::LOCK_RELEASED, new GenericEvent($this->lock));
+        $this->getLock()->release();
+        $this->eventDispatcher->dispatch(Events::LOCK_RELEASED, new GenericEvent($this->getLock()));
         unlink($this->pidfile);
     }
 
@@ -143,12 +147,35 @@ class JobProcessor implements JobProcessorInterface
         }
     }
 
+    public function setPidfile($pidfile)
+    {
+        $this->pidfile = $pidfile;
+        if ($this->lock) {
+            $this->lock->release();
+            $this->lock = null;
+        }
+        return $this;
+    }
+
+    public function getPidfile()
+    {
+        return $this->pidfile;
+    }
+
+    public function getLock()
+    {
+        if (!$this->lock) {
+            $this->lock = new LockHandler(md5($this->pidfile), $this->heartbeatInterval, dirname($this->pidfile));
+        }
+        return $this->lock;
+    }
+
     /**
      * {@inheritdoc}
      */
     public function isAlive()
     {
-        return $this->lock->isAlive();
+        return $this->getLock()->isAlive();
     }
 
     protected function getPid()
@@ -164,8 +191,8 @@ class JobProcessor implements JobProcessorInterface
      */
     protected function checkProcess()
     {
-        if ($this->lock->lock(false)) {
-            $this->eventDispatcher->dispatch(Events::LOCK_CREATED, new GenericEvent($this->lock));
+        if ($this->getLock()->lock(false)) {
+            $this->eventDispatcher->dispatch(Events::LOCK_CREATED, new GenericEvent($this->getLock()));
             $this->lastHeartbeatTime = time();
             $pid = $this->getPid();
             if ($pid > 0 && posix_kill($pid, 0)) {
@@ -183,8 +210,8 @@ class JobProcessor implements JobProcessorInterface
 
     protected function heartbeat()
     {
-        if (time() - $this->lastHeartbeatTime > $this->lock->getHeartbeatInterval() - 5) {
-            return $this->lock->heartbeat();
+        if (time() - $this->lastHeartbeatTime > $this->getLock()->getHeartbeatInterval() - 5) {
+            return $this->getLock()->heartbeat();
         }
         return true;
     }
