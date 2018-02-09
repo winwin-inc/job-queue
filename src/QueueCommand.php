@@ -42,6 +42,7 @@ class QueueCommand extends Command
         $tube = $input->getOption("tube");
         if ($tube) {
             $jobProcessor->setPidfile(sprintf("%s/queue-%s.pid", dirname($jobProcessor->getPidfile()), md5($tube)));
+            $tube = array_unique(array_filter(explode(",", $tube)));
         }
 
         if ($input->getOption('reload')) {
@@ -62,29 +63,42 @@ class QueueCommand extends Command
                     if ($output->isVerbose()) {
                         $output->writeln("<info>Start $workers job queue worker</info>");
                     }
-                    $jobQueue = $this->container->get(JobQueueInterface::class);
-                    if ($jobQueue instanceof JobQueueCluster) {
-                        foreach ($jobQueue->getJobQueueList() as $queue) {
-                            if ($tube) {
-                                $queue->setWatchTubes(explode(",", $tube));
-                            }
-                            $worker = new JobQueueWorker($queue, $this->container->get(JobFactoryInterface::class), $this->container->get(EventDispatcherInterface::class));
-                            foreach (range(0, $workers - 1) as $i) {
-                                $jobProcessor->addWorker($worker);
-                            }
-                        }
-                    } else {
-                        if ($tube) {
-                            $jobQueue->setWatchTubes(explode(",", $tube));
-                        }
-                        $worker = $this->container->get(JobQueueWorker::class);
-                        foreach (range(0, $workers - 1) as $i) {
-                            $jobProcessor->addWorker($worker);
-                        }
-                    }
+                    $this->addJobQueueWorkers($jobProcessor, $workers, $tube);
                 }
             }
             $jobProcessor->start();
+        }
+    }
+
+    private function addJobQueueWorkers($jobProcessor, $workers, $tubes)
+    {
+        $jobQueue = $this->container->get(JobQueueInterface::class);
+        if ($jobQueue instanceof JobQueueCluster) {
+            foreach ($jobQueue->getJobQueueList() as $queue) {
+                if ($tubes) {
+                    $this->setWatchTubes($queue, $tubes);
+                }
+                $worker = new JobQueueWorker($queue, $this->container->get(JobFactoryInterface::class), $this->container->get(EventDispatcherInterface::class));
+                foreach (range(0, $workers - 1) as $i) {
+                    $jobProcessor->addWorker($worker);
+                }
+            }
+        } else {
+            if ($tubes) {
+                $this->setWatchTubes($jobQueue, $tubes);
+            }
+            $worker = $this->container->get(JobQueueWorker::class);
+            foreach (range(0, $workers - 1) as $i) {
+                $jobProcessor->addWorker($worker);
+            }
+        }
+    }
+
+    private function setWatchTubes($jobQueue, $tubes)
+    {
+        if (!empty($tubes)) {
+            $jobQueue->setTube($tubes[0])
+                ->setWatchTubes($tubes);
         }
     }
 
