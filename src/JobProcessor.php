@@ -127,10 +127,10 @@ class JobProcessor implements JobProcessorInterface
     public function stop()
     {
         $pid = $this->getPid();
-        if ($pid) {
+        if ($pid > 0 && posix_kill($pid, 0)) {
             return posix_kill($pid, SIGINT);
         } else {
-            return false;
+            throw new \RuntimeException("Job processor is not running");
         }
     }
     
@@ -140,7 +140,7 @@ class JobProcessor implements JobProcessorInterface
     public function reload()
     {
         $pid = $this->getPid();
-        if ($pid) {
+        if ($pid > 0 && posix_kill($pid, 0)) {
             return posix_kill($pid, SIGUSR1);
         } else {
             throw new \RuntimeException("Job processor is not running");

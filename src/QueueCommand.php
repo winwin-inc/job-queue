@@ -17,6 +17,16 @@ class QueueCommand extends Command
      */
     protected $container;
 
+    /**
+     * @var InputInterface
+     */
+    private $input;
+
+    /**
+     * @var OutputInterface
+     */
+    private $output;
+
     protected function configure()
     {
         $this->setDescription('Job queue control')
@@ -37,49 +47,31 @@ class QueueCommand extends Command
         if (!$this->container) {
             throw new RuntimeException("Job processor was not setup");
         }
-        /** @var JobProcessor $jobProcessor */
-        $jobProcessor = $this->container->get(JobProcessorInterface::class);
-        $tube = $input->getOption("tube");
-        if ($tube) {
-            $jobProcessor->setPidfile(sprintf("%s/queue-%s.pid", dirname($jobProcessor->getPidfile()), md5($tube)));
-            $tube = array_unique(array_filter(explode(",", $tube)));
-        }
+        $this->input = $input;
+        $this->output = $output;
 
         if ($input->getOption('reload')) {
-            $jobProcessor->reload();
+            $this->reload();
         } elseif ($input->getOption('stop')) {
-            $jobProcessor->stop();
+            $this->stop();
         } else {
-            if (!$input->getOption('no-schedule') && $this->container->has(ScheduleWorker::class)) {
-                if ($output->isVerbose()) {
-                    $output->writeln("<info>Start schedule worker</info>");
-                }
-                $jobProcessor->addWorker($this->container->get(ScheduleWorker::class));
-            }
-
-            if ($this->container->has(JobQueueWorker::class)) {
-                $workers = $input->getOption('queue-workers');
-                if ($workers > 0) {
-                    if ($output->isVerbose()) {
-                        $output->writeln("<info>Start $workers job queue worker</info>");
-                    }
-                    $this->addJobQueueWorkers($jobProcessor, $workers, $tube);
-                }
-            }
-            $jobProcessor->start();
+            $this->start();
         }
     }
 
-    private function addJobQueueWorkers($jobProcessor, $workers, $tubes)
+    private function addJobQueueWorkers($jobProcessor, $workers)
     {
+        $tubes = $this->getTubes();
         $jobQueue = $this->container->get(JobQueueInterface::class);
+        $jobFactory = $this->container->get(JobFactoryInterface::class);
+        $eventDispatcher = $this->container->get(EventDispatcherInterface::class);
         if ($jobQueue instanceof JobQueueCluster) {
             foreach ($jobQueue->getJobQueueList() as $queue) {
                 if ($tubes) {
                     $this->setWatchTubes($queue, $tubes);
                 }
-                $worker = new JobQueueWorker($queue, $this->container->get(JobFactoryInterface::class), $this->container->get(EventDispatcherInterface::class));
-                foreach (range(0, $workers - 1) as $i) {
+                $worker = new JobQueueWorker($queue, $jobFactory, $eventDispatcher);
+                foreach (range(1, $workers) as $i) {
                     $jobProcessor->addWorker($worker);
                 }
             }
@@ -87,8 +79,8 @@ class QueueCommand extends Command
             if ($tubes) {
                 $this->setWatchTubes($jobQueue, $tubes);
             }
-            $worker = $this->container->get(JobQueueWorker::class);
-            foreach (range(0, $workers - 1) as $i) {
+            $worker = new JobQueueWorker($jobQueue, $jobFactory, $eventDispatcher);
+            foreach (range(1, $workers) as $i) {
                 $jobProcessor->addWorker($worker);
             }
         }
@@ -106,5 +98,64 @@ class QueueCommand extends Command
     {
         $this->container = $container;
         return $this;
+    }
+
+    protected function getTubes()
+    {
+        $tube = $this->input->getOption("tube");
+        $tubes = [];
+        if ($tube) {
+            $tubes = array_unique(array_filter(explode(",", $tube)));
+            sort($tubes);
+        }
+        return $tubes;
+    }
+
+    /**
+     * @return JobProcessorInterface
+     */
+    protected function getJobProcessor()
+    {
+        /** @var JobProcessor $jobProcessor */
+        $jobProcessor = $this->container->get(JobProcessorInterface::class);
+        $tubes = $this->getTubes();
+        if ($tubes) {
+            $jobProcessor->setPidfile(sprintf("%s/queue-%s.pid",
+                dirname($jobProcessor->getPidfile()), md5(implode(",", $tubes))));
+        }
+        return $jobProcessor;
+    }
+
+    protected function reload()
+    {
+        $this->getJobProcessor()->reload();
+    }
+
+    protected function stop()
+    {
+        $this->getJobProcessor()->stop();
+    }
+
+    protected function start()
+    {
+        $jobProcessor = $this->getJobProcessor();
+        if (!$this->input->getOption('no-schedule')
+            && $this->container->has(ScheduleWorker::class)) {
+            if ($this->output->isVerbose()) {
+                $this->output->writeln("<info>Start schedule worker</info>");
+            }
+            $jobProcessor->addWorker($this->container->get(ScheduleWorker::class));
+        }
+
+        if ($this->container->has(JobQueueWorker::class)) {
+            $workers = $this->input->getOption('queue-workers');
+            if ($workers > 0) {
+                if ($this->output->isVerbose()) {
+                    $this->output->writeln("<info>Start $workers job queue worker</info>");
+                }
+                $this->addJobQueueWorkers($jobProcessor, $workers);
+            }
+        }
+        $jobProcessor->start();
     }
 }
