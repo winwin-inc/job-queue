@@ -37,4 +37,13 @@ interface JobQueueInterface
      * @return bool
      */
     public function bury($job);
+
+    /**
+     * create new instance with the tube
+     *
+     * @param string $tube
+     *
+     * @return static
+     */
+    public function withTube($tube);
 }

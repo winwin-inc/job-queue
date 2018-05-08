@@ -28,7 +28,7 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
     /**
      * @var int
      */
-    private $retryInterval = 10;
+    private $retryInterval = 30;
 
     public function __construct(array $servers, $tube = null)
     {
@@ -41,6 +41,18 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
         }
         $this->current = mt_rand(0, count($servers)-1);
         $this->statuses = [];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function withTube($tube)
+    {
+        $copy = clone $this;
+        foreach ($copy->jobQueues as $i => $jobQueue) {
+            $copy->jobQueues[$i] = $jobQueue->withTube($tube);
+        }
+        return $copy;
     }
 
     /**
