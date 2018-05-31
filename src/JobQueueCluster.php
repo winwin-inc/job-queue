@@ -80,13 +80,14 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
      * @param int $priority
      * @param int $ttr
      *
-     * @return int the job Id
+     * @return string the job Id
      */
     public function put($jobClass, array $payload, $delay = 0, $priority = 1024, $ttr = 60)
     {
         while (true) {
             try {
-                return $this->getCurrentJobQueue()->put($jobClass, $payload, $delay, $priority, $ttr);
+                $jobId = $this->getCurrentJobQueue()->put($jobClass, $payload, $delay, $priority, $ttr);
+                return $this->getJobId($jobId);
             } catch (\Pheanstalk\Exception $e) {
                 $this->logger && $this->logger->error("[JobQueue] Cannot put job: " . $e->getMessage());
                 try {
@@ -105,6 +106,12 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
     public function getJobQueueList()
     {
         return $this->jobQueues;
+    }
+
+    private function getJobId($id)
+    {
+        $queue = $this->jobQueues[$this->current];
+        return $queue->getHost() . ':' . $queue->getPort() . ':' . $id;
     }
 
     private function getCurrentJobQueue()
@@ -141,13 +148,26 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
     }
 
     /**
-     * @param \Pheanstalk\Job|int $job
+     * @param string $job
      *
      * @return bool
      */
     public function delete($job)
     {
-        throw new \BadMethodCallException("Cannot delete from cluster");
+        if (is_object($job)) {
+            throw new \InvalidArgumentException("Job queue cluster cannot delete job object");
+        }
+        $parts = explode(":", $job);
+        if (count($parts) != 3) {
+            return false;
+        }
+        list($host, $port, $jobId) = $parts;
+        foreach ($this->jobQueues as $jobQueue) {
+            if ($jobQueue->getHost() == $host && $jobQueue->getPort() == $port) {
+                return $jobQueue->delete($jobId);
+            }
+        }
+        return false;
     }
 
     /**

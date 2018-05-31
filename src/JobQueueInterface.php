@@ -13,7 +13,7 @@ interface JobQueueInterface
      * @param int    $priority
      * @param int    $ttr
      *
-     * @return int the job Id
+     * @return string the job Id
      */
     public function put($jobClass, array $payload, $delay = 0, $priority = 1024, $ttr = 60);
 
@@ -25,7 +25,7 @@ interface JobQueueInterface
     public function reserve($timeout = null);
 
     /**
-     * @param \Pheanstalk\Job|int $job
+     * @param \Pheanstalk\Job|string $job
      *
      * @return bool
      */
