@@ -85,7 +85,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
     {
         $job = $event['job'];
         $error = $event['error'];
-        $this->logger->info(sprintf("[QueueWorker] job-failed job={id: %d, payload: %s} pid=%d, error=%s", $job->getId(), $job->getData(), getmypid(), $error));
+        $this->logger->error(sprintf("[QueueWorker] job-failed job={id: %d, payload: %s} pid=%d, error=%s", $job->getId(), $job->getData(), getmypid(), $error));
     }
 
     /**
@@ -94,7 +94,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
     public function onServerError($event)
     {
         $error = $event['error'];
-        $this->logger->info(sprintf("[QueueWorker] server-error pid=%d, error=%s", getmypid(), $error->getMessage()));
+        $this->logger->error(sprintf("[QueueWorker] server-error pid=%d, error=%s", getmypid(), $error->getMessage()));
     }
 
     /**
