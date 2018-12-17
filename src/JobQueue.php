@@ -69,7 +69,7 @@ class JobQueue implements JobQueueInterface
      */
     public function reserve($timeout = null)
     {
-        return $this->getBeanstalk($watch = true)->reserve($timeout);
+        return @$this->getBeanstalk($watch = true)->reserve($timeout);
     }
 
     /**
