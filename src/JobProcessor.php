@@ -118,7 +118,7 @@ class JobProcessor implements JobProcessorInterface
         }
         $this->getLock()->release();
         $this->eventDispatcher->dispatch(Events::LOCK_RELEASED, new GenericEvent($this->getLock()));
-        unlink($this->pidfile);
+        @unlink($this->pidfile);
     }
 
     /**

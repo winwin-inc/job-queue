@@ -129,9 +129,9 @@ class LockHandler
             flock($this->handle, LOCK_UN | LOCK_NB);
             fclose($this->handle);
             $this->handle = null;
-            unlink($this->file);
+            @unlink($this->file);
         } elseif ($force) {
-            unlink($this->file);
+            @unlink($this->file);
         }
     }
 

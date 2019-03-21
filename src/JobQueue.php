@@ -92,24 +92,33 @@ class JobQueue implements JobQueueInterface
     {
         if (null === $this->beanstalk) {
             $this->beanstalk = new Pheanstalk($this->host, $this->port);
-            if ($this->tube) {
-                $this->beanstalk->useTube($this->tube);
-            }
-        }
+            if ($watch) {
+                $tubes = $this->watchTubes;
+                if ($this->tube) {
+                    $tubes[] = $this->tube;
+                }
 
-        if ($watch && !$this->watched) {
-            if ($this->tube) {
-                $this->beanstalk->watchOnly($this->tube);
-            }
-            if (!empty($this->watchTubes)) {
-                foreach ($this->watchTubes as $tube) {
-                    $this->beanstalk->watch($tube);
+                $tubes = array_diff($tubes, array_keys($this->beanstalk->listTubesWatched()));
+                if (!empty($tubes)) {
+                    $tube = array_shift($tubes);
+                    $this->beanstalk->watchOnly($tube);
+
+                    foreach ($tubes as $tube) {
+                        $this->beanstalk->watch($tube);
+                    }
                 }
             }
-            $this->watched = true;
         }
 
+        if ($this->tube && $this->tube != $this->beanstalk->listTubeUsed()) {
+            $this->beanstalk->useTube($this->tube);
+        }
         return $this->beanstalk;
+    }
+
+    public function disconnect()
+    {
+        $this->beanstalk = null;
     }
 
     public function setBeanstalk(PheanstalkInterface $beanstalk)

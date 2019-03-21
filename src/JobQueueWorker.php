@@ -65,6 +65,7 @@ class JobQueueWorker extends AbstractWorker
             $this->processedJobs++;
             return true;
         } catch (\Pheanstalk\Exception $e) {
+            $this->jobQueue->disconnect();
             $event['error'] = $e;
             $this->eventDispatcher->dispatch(Events::JOB_FAILED, $event);
             sleep(10);
@@ -87,12 +88,14 @@ class JobQueueWorker extends AbstractWorker
             $this->sleepInterval = 1;
             return $job;
         } catch (Exception $e) {
+            $this->jobQueue->disconnect();
             $event = new GenericEvent($this->jobQueue);
             $event['error'] = $e;
             $this->eventDispatcher->dispatch(Events::SERVER_ERROR, $event);
             if ($this->sleepInterval < 64) {
                 $this->sleepInterval *= 2;
             }
+            error_log("will sleep for " . $this->sleepInterval . " seconds");
             sleep($this->sleepInterval);
             return false;
         }

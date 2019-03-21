@@ -76,6 +76,7 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
             try {
                 return $this->getCurrentJobQueue()->put($jobClass, $payload, $delay, $priority, $ttr);
             } catch (\Pheanstalk\Exception $e) {
+                $this->getCurrentJobQueue()->disconnect();
                 $this->logger && $this->logger->error("[JobQueue] Cannot put job: " . $e->getMessage());
                 try {
                     $this->nextJobQueue();
@@ -146,5 +147,12 @@ class JobQueueCluster implements JobQueueInterface, LoggerAwareInterface
     public function bury($job)
     {
         throw new \BadMethodCallException("Cannot bury from cluster");
+    }
+
+    public function disconnect()
+    {
+        foreach ($this->jobQueues as $jobQueue) {
+            $jobQueue->disconnect();
+        }
     }
 }

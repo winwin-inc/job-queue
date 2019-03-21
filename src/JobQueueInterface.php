@@ -37,4 +37,9 @@ interface JobQueueInterface
      * @return bool
      */
     public function bury($job);
+
+    /**
+     * Disconnect from server
+     */
+    public function disconnect();
 }
