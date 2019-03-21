@@ -48,6 +48,14 @@ class JobQueue implements JobQueueInterface
     /**
      * {@inheritdoc}
      */
+    public function withTube($tube)
+    {
+        return new static($this->host, $this->port, $tube);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function put($jobClass, array $payload, $delay = 0, $priority = 1024, $ttr = 60)
     {
         return $this->getBeanstalk()->put(json_encode([
@@ -61,7 +69,7 @@ class JobQueue implements JobQueueInterface
      */
     public function reserve($timeout = null)
     {
-        return $this->getBeanstalk($watch = true)->reserve($timeout);
+        return @$this->getBeanstalk($watch = true)->reserve($timeout);
     }
 
     /**

@@ -45,8 +45,11 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
         if ($worker instanceof ScheduleWorker) {
             foreach ($worker->getJobs() as $job) {
                 /** @var ScheduleJob $job */
-                $this->logger->info(sprintf("[ScheduleWorker] schedule command '%s' with '%s'",
-                    $job->getCommand() ?: $job->description, $job->getExpression()));
+                $this->logger->info(sprintf(
+                    "[ScheduleWorker] schedule command '%s' with '%s'",
+                    $job->getCommand() ?: $job->description,
+                    $job->getExpression()
+                ));
             }
         }
     }
@@ -85,7 +88,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
     {
         $job = $event['job'];
         $error = $event['error'];
-        $this->logger->info(sprintf("[QueueWorker] job-failed job={id: %d, payload: %s} pid=%d, error=%s", $job->getId(), $job->getData(), getmypid(), $error));
+        $this->logger->error(sprintf("[QueueWorker] job-failed job={id: %d, payload: %s} pid=%d, error=%s", $job->getId(), $job->getData(), getmypid(), $error));
     }
 
     /**
@@ -94,7 +97,7 @@ class LogEventSubscriber implements EventSubscriberInterface, LoggerAwareInterfa
     public function onServerError($event)
     {
         $error = $event['error'];
-        $this->logger->info(sprintf("[QueueWorker] server-error pid=%d, error=%s", getmypid(), $error->getMessage()));
+        $this->logger->error(sprintf("[QueueWorker] server-error pid=%d, error=%s", getmypid(), $error->getMessage()));
     }
 
     /**
