@@ -1,322 +1,164 @@
 <?php
 
+
 namespace winwin\jobQueue;
 
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\EventDispatcher\GenericEvent;
+use kuiper\swoole\coroutine\Coroutine;
+use Pheanstalk\Exception as BeanstalkException;
+use Pheanstalk\Job as BeanstalkJob;
+use Pheanstalk\Pheanstalk;
+use Psr\Container\ContainerInterface;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Swoole\Process\Pool;
+use winwin\jobQueue\event\AfterProcessJobEvent;
+use winwin\jobQueue\event\BeanstalkErrorEvent;
+use winwin\jobQueue\event\BeforeProcessJobEvent;
+use winwin\jobQueue\event\JobFailedEvent;
+use winwin\jobQueue\exception\RetryException;
 
-class JobProcessor implements JobProcessorInterface
+class JobProcessor implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
+    protected const TAG = '[' . __CLASS__ . '] ';
+
+    /**
+     * @var ContainerInterface
+     */
+    private $container;
     /**
      * @var EventDispatcherInterface
      */
     private $eventDispatcher;
-
     /**
-     * @var string
+     * @var JobStatService
      */
-    private $pidfile;
-
+    private $jobStatService;
     /**
-     * @var LockHandler
+     * @var callable
      */
-    private $lock;
-
+    private $beanstalkFactory;
     /**
      * @var int
      */
-    private $heartbeatInterval = 60;
-
+    private $workerNum;
     /**
      * @var int
      */
-    private $lastHeartbeatTime;
+    private $sleepInterval;
+    /**
+     * @var Pheanstalk
+     */
+    private $beanstalk;
 
     /**
-     * @var bool
+     * JobProcessor constructor.
+     * @param ContainerInterface $container
+     * @param EventDispatcherInterface $eventDispatcher
+     * @param callable $beanstalkFactory
+     * @param int $workerNum
+     * @param int $sleepInterval
      */
-    private $stopped = false;
-
-    /**
-     * @var bool
-     */
-    private $workerStopped = false;
-
-    /**
-     * @var array
-     */
-    private $workerPids = [];
-
-    /**
-     * @var WorkerInterface[]
-     */
-    private $workers;
-
-    public function __construct(EventDispatcherInterface $eventDispatcher, $pidfile)
-    {
-        if (strpos(strtolower(PHP_OS), 'win') === 0) {
-            throw new \RuntimeException("This application not support windows");
-        }
-
-        // 检查扩展
-        if (!extension_loaded('pcntl')) {
-            throw new \RuntimeException("Please install pcntl extension");
-        }
-
-        if (!extension_loaded('posix')) {
-            throw new \RuntimeException("Please install posix extension");
-        }
-
+    public function __construct(
+        ContainerInterface $container,
+        JobStatService $jobStatService,
+        EventDispatcherInterface $eventDispatcher,
+        callable $beanstalkFactory,
+        int $workerNum = 1,
+        int $sleepInterval = 1
+    ) {
+        $this->container = $container;
         $this->eventDispatcher = $eventDispatcher;
-        $this->setPidfile($pidfile);
+        $this->beanstalkFactory = $beanstalkFactory;
+        $this->workerNum = $workerNum;
+        $this->sleepInterval = $sleepInterval;
+        $this->jobStatService = $jobStatService;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function addWorker(WorkerInterface $worker, $num = 1)
+    public function start(): void
     {
-        foreach (range(1, $num) as $i) {
-            $this->workers[] = $worker;
-        }
-
-        return $this;
+        $this->logger->info(static::TAG . 'start job queue processor');
+        Coroutine::disable();
+        $pool = new Pool($this->workerNum);
+        $pool->on("WorkerStart", [$this, 'onWorkerStart']);
+        $pool->start();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function start()
+    public function onWorkerStart($pool, $workerId): void
     {
-        declare(ticks=1);
+        $this->beanstalk = call_user_func($this->beanstalkFactory, $workerId);
+        $this->jobStatService->register($workerId, getmypid());
+        while (true) {
+            $job = $this->grabJob();
+            if (!$job) {
+                $this->jobStatService->heartbeat($workerId);
+                continue;
+            }
+            $action = null;
+            $args = [];
+            try {
+                $startTime = microtime(true);
+                $this->handle($job);
+                $action = 'delete';
+                $this->jobStatService->success($workerId, (microtime(true)-$startTime)*1000);
+                $this->logger->info(static::TAG . 'job process successfully', ['worker' => $workerId, 'job_id' => $job->getId()]);
+            } catch (RetryException $e) {
+                $action = 'release';
+                $args = [$e->getPriority(), $e->getDelay()];
+                $this->logger->warning(static::TAG . 'retry job', ['job_id' => $job->getId(), 'delay' => $e->getDelay()]);
+            } catch (\Throwable $e) {
+                $this->eventDispatcher->dispatch(new JobFailedEvent($e, $job));
+                $this->jobStatService->failure($workerId);
+                $action = 'bury';
+                $this->logger->error(static::TAG . 'job process failed: ' . $e, [
+                    'job_id' => $job->getId(),
+                    'data' => $job->getData()
+                ]);
+            }
+            try {
+                call_user_func_array([$this->beanstalk, $action], array_merge([$job], $args));
+            } catch (BeanstalkException $e) {
+                $this->eventDispatcher->dispatch(new BeanstalkErrorEvent($e, $job));
+                $this->logger->error(static::TAG . "beanstalk $action failed", ['job_id' => $job->getId()]);
+            }
+        }
+    }
 
-        if (empty($this->workers)) {
-            throw new \RuntimeException("No workers added.");
+    private function handle(BeanstalkJob $job): void
+    {
+        /** @var BeforeProcessJobEvent $event */
+        $event = $this->eventDispatcher->dispatch(new BeforeProcessJobEvent($job));
+        $job = $event->getJob();
+
+        $data = json_decode($job->getData(), true);
+        if (!isset($data['job'], $data['payload'])) {
+            throw new \UnexpectedValueException('invalid job');
         }
 
-        $this->checkProcess();
-        $this->eventDispatcher->dispatch(Events::PROCESSOR_START, new GenericEvent($this));
-        $this->installSignal();
+        if (!class_exists($data['job'])) {
+            throw new \UnexpectedValueException("job {$data['job']} does not exist");
+        }
+        $this->logger->info(static::TAG . 'handle job', ['job' => $data['job'], 'job_id' => $job->getId()]);
+        $handler = $this->container->get($data['job']);
+        if (!$handler instanceof JobHandlerInterface) {
+            throw new \UnexpectedValueException("job {$data['job']} does not implement " . JobHandlerInterface::class);
+        }
+        $handler->handle($data['payload']);
+
+        $this->eventDispatcher->dispatch(new AfterProcessJobEvent($job));
+    }
+
+    private function grabJob(): ?BeanstalkJob
+    {
         try {
-            while (!$this->stopped) {
-                if (!$this->heartbeat()) {
-                    throw new \RuntimeException("Heartbeat failed");
-                }
-                $this->startWorkers();
-                $pid = pcntl_wait($status, WNOHANG);
-                if ($pid) {
-                    $key = array_search($pid, $this->workerPids);
-                    if ($key) {
-                        unset($this->workerPids[$key]);
-                    }
-                } else {
-                    sleep(1);
-                }
-            }
-        } catch (\Exception $e) {
-            $this->stopWorkers();
+            return $this->beanstalk->reserveWithTimeout(1);
+        } catch (BeanstalkException $e) {
+            $this->eventDispatcher->dispatch(new BeanstalkErrorEvent($e, null));
+            $this->logger->error(static::TAG . 'beanstalk reserve failed');
+            sleep($this->sleepInterval);
+            return null;
         }
-        $this->getLock()->release();
-        $this->eventDispatcher->dispatch(Events::LOCK_RELEASED, new GenericEvent($this->getLock()));
-        @unlink($this->pidfile);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function stop()
-    {
-        $pid = $this->getPid();
-        if ($pid > 0 && posix_kill($pid, 0)) {
-            return posix_kill($pid, SIGINT);
-        } else {
-            throw new \RuntimeException("Job processor is not running");
-        }
-    }
-    
-    /**
-     * {@inheritdoc}
-     */
-    public function reload()
-    {
-        $pid = $this->getPid();
-        if ($pid > 0 && posix_kill($pid, 0)) {
-            return posix_kill($pid, SIGUSR1);
-        } else {
-            throw new \RuntimeException("Job processor is not running");
-        }
-    }
-
-    public function setPidfile($pidfile)
-    {
-        $this->pidfile = $pidfile;
-        if ($this->lock) {
-            $this->lock->release();
-            $this->lock = null;
-        }
-        return $this;
-    }
-
-    public function getPidfile()
-    {
-        return $this->pidfile;
-    }
-
-    public function getLock()
-    {
-        if (!$this->lock) {
-            $this->lock = new LockHandler(md5($this->pidfile), $this->heartbeatInterval, dirname($this->pidfile));
-        }
-        return $this->lock;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function isAlive()
-    {
-        return $this->getLock()->isAlive();
-    }
-
-    protected function getPid()
-    {
-        if (is_file($this->pidfile)) {
-            return (int) file_get_contents($this->pidfile);
-        }
-        return -1;
-    }
-
-    /**
-     * check whether the processor already started
-     */
-    protected function checkProcess()
-    {
-        if ($this->getLock()->lock(false)) {
-            $this->eventDispatcher->dispatch(Events::LOCK_CREATED, new GenericEvent($this->getLock()));
-            $this->lastHeartbeatTime = time();
-            $pid = $this->getPid();
-            if ($pid > 0 && posix_kill($pid, 0)) {
-                throw new \RuntimeException("Job processor is running, pid=$pid");
-            }
-            $dir = dirname($this->pidfile);
-            if (!is_dir($dir) && !mkdir($dir, 0777, true)) {
-                throw new \RuntimeException("Cannot create pid file directory '$dir'");
-            }
-            file_put_contents($this->pidfile, getmypid());
-        } else {
-            throw new \RuntimeException("Lock exists, is the processor running?");
-        }
-    }
-
-    protected function heartbeat()
-    {
-        if (time() - $this->lastHeartbeatTime > $this->getLock()->getHeartbeatInterval() - 5) {
-            return $this->getLock()->heartbeat();
-        }
-        return true;
-    }
-
-    protected function startWorkers()
-    {
-        foreach ($this->workers as $i => $worker) {
-            if (isset($this->workerPids[$i])) {
-                $pid = $this->workerPids[$i];
-                if (posix_kill($pid, 0)) {
-                    continue;
-                }
-            }
-            $pid = pcntl_fork();
-            if ($pid == -1) {
-                throw new \RuntimeException('Cannot fork queue worker');
-            } elseif ($pid) {
-                $this->workerPids[$i] = $pid;
-            } else {
-                $this->reinstallSignal();
-                $this->startWorker($worker);
-                exit;
-            }
-        }
-    }
-
-    protected function installSignal()
-    {
-        // stop
-        pcntl_signal(SIGINT, [$this, 'signalHandler']);
-        // reload
-        pcntl_signal(SIGUSR1, [$this, 'signalHandler']);
-        // ignore
-        pcntl_signal(SIGPIPE, SIG_IGN);
-    }
-
-    protected function reinstallSignal()
-    {
-        // uninstall stop signal handler
-        pcntl_signal(SIGINT, SIG_IGN);
-        // uninstall reload signal handler
-        pcntl_signal(SIGUSR1, SIG_IGN);
-
-        pcntl_signal(SIGINT, [$this, 'workerSignalHandler']);
-        pcntl_signal(SIGUSR1, [$this, 'workerSignalHandler']);
-    }
-
-    public function signalHandler($signal)
-    {
-        switch ($signal) {
-            // Stop.
-            case SIGINT:
-                $this->eventDispatcher->dispatch(Events::BEFORE_PROCESSOR_STOP, new GenericEvent($this));
-                $this->stopped = true;
-                $this->stopWorkers();
-                $this->eventDispatcher->dispatch(Events::AFTER_PROCESSOR_STOP, new GenericEvent($this));
-                break;
-            // Reload.
-            case SIGUSR1:
-                $this->eventDispatcher->dispatch(Events::BEFORE_PROCESSOR_RELOAD, new GenericEvent($this));
-                $this->reloadWorkers();
-                $this->eventDispatcher->dispatch(Events::AFTER_PROCESSOR_RELOAD, new GenericEvent($this));
-                break;
-        }
-    }
-
-    public function workerSignalHandler($signal)
-    {
-        switch ($signal) {
-            // Stop.
-        case SIGINT:
-            $this->workerStopped = true;
-            break;
-        case SIGUSR1:
-            $this->eventDispatcher->dispatch(EVENTS::WORKER_RELOAD, new GenericEvent($this));
-            $this->workerStopped = true;
-            break;
-        }
-    }
-
-    protected function stopWorkers()
-    {
-        foreach ($this->workerPids as $i => $workerPid) {
-            if (posix_kill($workerPid, SIGINT)) {
-                pcntl_waitpid($workerPid, $status);
-                unset($this->workerPids[$i]);
-            }
-        }
-    }
-
-    protected function reloadWorkers()
-    {
-        foreach ($this->workerPids as $i => $workerPid) {
-            posix_kill($workerPid, SIGUSR1);
-        }
-    }
-
-    protected function startWorker(WorkerInterface $worker)
-    {
-        $this->eventDispatcher->dispatch(Events::WORKER_START, new GenericEvent($worker));
-        $worker->start();
-        while (!$this->workerStopped && $worker->shouldRun()) {
-            $worker->work();
-        }
-        $worker->stop();
-        $this->eventDispatcher->dispatch(Events::WORKER_STOP, new GenericEvent($worker));
     }
 }

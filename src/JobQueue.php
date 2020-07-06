@@ -2,187 +2,48 @@
 
 namespace winwin\jobQueue;
 
-use Pheanstalk\Exception\ServerException;
 use Pheanstalk\Pheanstalk;
-use Pheanstalk\PheanstalkInterface;
 
-class JobQueue implements JobQueueInterface
+class JobQueue implements JobFactoryInterface, JobQueueInterface
 {
-    /**
-     * @var string
-     */
-    private $host;
-
-    /**
-     * @var string
-     */
-    private $port;
-
-    /**
-     * @var string
-     */
-    private $tube;
-
-    /**
-     * @var string[]
-     */
-    private $watchTubes = [];
-
-    /**
-     * @var PheanstalkInterface
-     */
     private $beanstalk;
 
     /**
-     * @var bool
+     * JobQueue constructor.
+     * @param $beanstalk
      */
-    private $watched = false;
-
-    public function __construct($host = 'localhost', $port = 11300, $tube = null)
-    {
-        $this->host = $host;
-        $this->port = $port;
-        $this->tube = $tube;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function withTube($tube)
-    {
-        return new static($this->host, $this->port, $tube);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function put($jobClass, array $payload, $delay = 0, $priority = 1024, $ttr = 60)
-    {
-        return $this->getBeanstalk()->put(json_encode([
-            'job' => $jobClass,
-            'payload' => $payload,
-        ]), $priority, $delay, $ttr);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function reserve($timeout = null)
-    {
-        return @$this->getBeanstalk($watch = true)->reserve($timeout);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function delete($job)
-    {
-        try {
-            if (!is_object($job)) {
-                $job = $this->getBeanstalk()->peek($job);
-            }
-            $this->getBeanstalk()->delete($job);
-            return true;
-        } catch (ServerException $e) {
-            return false;
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function bury($job)
-    {
-        return $this->getBeanstalk()->bury($job);
-    }
-
-    public function getBeanstalk($watch = false)
-    {
-        if (null === $this->beanstalk) {
-            $this->beanstalk = new Pheanstalk($this->host, $this->port);
-            if ($watch) {
-                $tubes = $this->watchTubes;
-                if ($this->tube) {
-                    $tubes[] = $this->tube;
-                }
-
-                $tubes = array_diff($tubes, array_keys($this->beanstalk->listTubesWatched()));
-                if (!empty($tubes)) {
-                    $tube = array_shift($tubes);
-                    $this->beanstalk->watchOnly($tube);
-
-                    foreach ($tubes as $tube) {
-                        $this->beanstalk->watch($tube);
-                    }
-                }
-            }
-        }
-
-        if ($this->tube && $this->tube != $this->beanstalk->listTubeUsed()) {
-            $this->beanstalk->useTube($this->tube);
-        }
-        return $this->beanstalk;
-    }
-
-    public function disconnect()
-    {
-        $this->beanstalk = null;
-    }
-
-    public function setBeanstalk(PheanstalkInterface $beanstalk)
+    public function __construct(Pheanstalk $beanstalk)
     {
         $this->beanstalk = $beanstalk;
-        return $this;
-    }
-
-    public function getHost()
-    {
-        return $this->host;
-    }
-
-    public function setHost($host)
-    {
-        $this->host = $host;
-        return $this;
-    }
-
-    public function getPort()
-    {
-        return $this->port;
-    }
-
-    public function setPort($port)
-    {
-        $this->port = $port;
-        return $this;
-    }
-
-    public function getTube()
-    {
-        return $this->tube;
-    }
-
-    public function setTube($tube)
-    {
-        $this->tube = $tube;
-        return $this;
     }
 
     /**
-     * @return string[]
+     * 创建任务
+     * @param string $jobClass
+     * @return JobInterface
      */
-    public function getWatchTubes()
+    public function create(string $jobClass, array $arguments): JobInterface
     {
-        return $this->watchTubes;
+        return new Job($this, $jobClass, $arguments);
     }
 
-    /**
-     * @param string[] $watchTubes
-     * @return $this
-     */
-    public function setWatchTubes(array $watchTubes)
-    {
-        $this->watchTubes = $watchTubes;
-        return $this;
+    public function put(
+        string $jobClass,
+        array $arguments,
+        int $delay = 0,
+        int $priority = 1024,
+        int $ttr = 60,
+        ?string $tube = null
+    ): int {
+        $put = function () use ($jobClass, $arguments, $delay, $priority, $ttr) {
+            return $this->beanstalk->put(json_encode([
+                'job' => $jobClass,
+                'payload' => $arguments,
+            ]), $priority, $delay, $ttr)->getId();
+        };
+        if ($tube) {
+            $this->beanstalk->withUsedTube($tube, $put);
+        }
+        return $put();
     }
 }

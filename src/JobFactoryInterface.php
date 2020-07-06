@@ -7,9 +7,9 @@ interface JobFactoryInterface
     /**
      * Creates the job instance
      *
-     * @param string $jobClass
+     * @param string $handlerClass
      *
      * @return JobInterface
      */
-    public function create($jobClass);
+    public function create(string $handlerClass, array $arguments): JobInterface;
 }

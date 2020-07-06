@@ -1,0 +1,21 @@
+module winwin
+{
+    struct JobStat {
+        0 require int activeWorkers;
+        1 require int pid;
+        2 require int successCount;
+        3 require int failureCount;
+        4 require int successCount1m;
+        5 require int failureCount1m;
+        6 require int successCount15m;
+        7 require int failureCount15m;
+        8 require int averageTime;
+    }
+
+    interface JobStat
+    {
+        JobStat stat();
+
+        JobStat statWorker(int workerId);
+    };
+};
