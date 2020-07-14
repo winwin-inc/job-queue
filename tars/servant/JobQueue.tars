@@ -10,7 +10,7 @@ module winwin
         6 require int successCount15m;
         7 require int failureCount15m;
         8 require int averageTime;
-    }
+    };
 
     interface JobStat
     {
