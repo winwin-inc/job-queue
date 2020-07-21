@@ -5,7 +5,7 @@ namespace winwin\jobQueue;
 
 use kuiper\swoole\pool\PoolInterface;
 
-class JobQueuePool implements JobFactoryInterface, JobQueueInterface
+class JobQueuePool implements JobQueueInterface
 {
     /**
      * @var PoolInterface
