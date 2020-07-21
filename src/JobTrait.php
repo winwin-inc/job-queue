@@ -4,8 +4,9 @@
 namespace winwin\jobQueue;
 
 use kuiper\helper\Arrays;
+use kuiper\helper\Text;
 
-abstract class AbstractJob implements JobInterface
+trait JobTrait
 {
     /**
      * AbstractJob constructor.
@@ -17,7 +18,12 @@ abstract class AbstractJob implements JobInterface
         if (!is_array($arguments)) {
             throw new \InvalidArgumentException("expect an array, got " . gettype($arguments));
         }
-        Arrays::assign($this, $arguments);
+        foreach ($arguments as $name => $value) {
+            $field = lcfirst(Text::camelCase($name));
+            if (property_exists($this, $field)) {
+                $this->{$field} = $value;
+            }
+        }
     }
 
     public function jsonSerialize()

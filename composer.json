@@ -12,6 +12,7 @@
         "psr/container": "^1.0"
     },
     "require-dev": {
+        "phpunit/phpunit": "^7.0",
         "swoft/swoole-ide-helper": "^4.4",
         "wenbinye/tars": "^0.1",
         "wenbinye/tars-gen": "^0.2",
