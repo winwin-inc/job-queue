@@ -14,7 +14,7 @@ class JobQueueClusterTest extends TestCase
         $queue = $this->createQueue();
         foreach (range(1, 2) as $i) {
             try {
-                $id = $queue->put(TestJob::class, $args = ['arg1' => 'val1']);
+                $id = $queue->put(TestJobOption::class, $args = ['arg1' => 'val1']);
                 error_log("put job: " . $id);
                 $ret = $queue->delete($id);
                 error_log("delete job: " . $ret);

@@ -1,0 +1,21 @@
+module winwin
+{
+    struct Job {
+        0 require string serverHost;
+        1 require int serverPort;
+        1 require string jobClass;
+        2 require string payload;
+        3 require int delay;
+        4 require int priority;
+        5 require int ttr;
+        6 require int tube;
+        7 optional int jobId;
+    };
+
+    interface JobQueue
+    {
+        int put(Job job);
+
+        void purge(int keepDays);
+    };
+};

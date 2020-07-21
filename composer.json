@@ -7,14 +7,14 @@
         "php": "^7.2",
         "ext-swoole": "*",
         "ext-json": "*",
+        "kuiper/kuiper": "^0.5",
         "pda/pheanstalk": "^4.0",
         "psr/container": "^1.0"
     },
     "require-dev": {
-        "kuiper/kuiper": "^0.5",
         "swoft/swoole-ide-helper": "^4.4",
         "wenbinye/tars": "^0.1",
-        "wenbinye/tars-gen": "^0.1",
+        "wenbinye/tars-gen": "^0.2",
         "winwin/composer-phpcs-plugin": "^0.2"
     },
     "autoload": {

@@ -3,6 +3,7 @@
 
 namespace winwin\jobQueue;
 
+use kuiper\annotations\AnnotationReaderInterface;
 use kuiper\swoole\coroutine\Coroutine;
 use Pheanstalk\Exception as BeanstalkException;
 use Pheanstalk\Job as BeanstalkJob;
@@ -12,13 +13,14 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Swoole\Process\Pool;
+use winwin\jobQueue\annotation\JobProcessor;
 use winwin\jobQueue\event\AfterProcessJobEvent;
 use winwin\jobQueue\event\BeanstalkErrorEvent;
 use winwin\jobQueue\event\BeforeProcessJobEvent;
 use winwin\jobQueue\event\JobFailedEvent;
 use winwin\jobQueue\exception\RetryException;
 
-class JobProcessor implements LoggerAwareInterface
+class JobDispatcher implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
@@ -52,6 +54,10 @@ class JobProcessor implements LoggerAwareInterface
      * @var Pheanstalk
      */
     private $beanstalk;
+    /**
+     * @var AnnotationReaderInterface
+     */
+    private $annotationReader;
 
     /**
      * JobProcessor constructor.
@@ -63,6 +69,7 @@ class JobProcessor implements LoggerAwareInterface
      */
     public function __construct(
         ContainerInterface $container,
+        AnnotationReaderInterface $annotationReader,
         JobStatService $jobStatService,
         EventDispatcherInterface $eventDispatcher,
         callable $beanstalkFactory,
@@ -70,11 +77,12 @@ class JobProcessor implements LoggerAwareInterface
         int $sleepInterval = 1
     ) {
         $this->container = $container;
+        $this->annotationReader = $annotationReader;
+        $this->jobStatService = $jobStatService;
         $this->eventDispatcher = $eventDispatcher;
         $this->beanstalkFactory = $beanstalkFactory;
         $this->workerNum = $workerNum;
         $this->sleepInterval = $sleepInterval;
-        $this->jobStatService = $jobStatService;
     }
 
     public function start(): void
@@ -140,12 +148,25 @@ class JobProcessor implements LoggerAwareInterface
         if (!class_exists($data['job'])) {
             throw new \UnexpectedValueException("job {$data['job']} does not exist");
         }
-        $this->logger->info(static::TAG . 'handle job', ['job' => $data['job'], 'job_id' => $job->getId()]);
-        $handler = $this->container->get($data['job']);
-        if (!$handler instanceof JobHandlerInterface) {
-            throw new \UnexpectedValueException("job {$data['job']} does not implement " . JobHandlerInterface::class);
+        $jobClass = new \ReflectionClass($data['job']);
+        /** @var JobProcessor $annotation */
+        $annotation = $this->annotationReader->getClassAnnotation($jobClass, JobProcessor::class);
+        if ($annotation) {
+            $jobProcessorClass = $annotation->value;
+        } else {
+            $jobProcessorClass = $data['job'] . 'Processor';
         }
-        $handler->handle($data['payload']);
+        $this->logger->info(static::TAG . 'handle job', [
+            'job' => $data['job'], 'processor' => $jobProcessorClass, 'job_id' => $job->getId()]);
+        if (!$this->container->has($jobProcessorClass)) {
+            throw new \UnexpectedValueException("Job processor $jobProcessorClass does not exist");
+        }
+        $handler = $this->container->get($jobProcessorClass);
+        if (!$handler instanceof JobProcessorInterface) {
+            throw new \UnexpectedValueException("job {$data['job']} does not implement " . JobProcessorInterface::class);
+        }
+        /** @noinspection PhpParamsInspection */
+        $handler->process($jobClass->newInstance($data['payload']));
 
         $this->eventDispatcher->dispatch(new AfterProcessJobEvent($job));
     }

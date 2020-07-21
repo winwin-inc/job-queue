@@ -1,16 +1,9 @@
 <?php
 
+
 namespace winwin\jobQueue;
 
-interface JobInterface
+interface JobInterface extends \JsonSerializable
 {
-    public function priority(int $priority): JobInterface;
-
-    public function tube(string $tube): JobInterface;
-
-    public function timeToRun(int $ttr): JobInterface;
-
-    public function delay(int $delaySeconds): JobInterface;
-
-    public function put(): int;
+    public function __construct($data);
 }

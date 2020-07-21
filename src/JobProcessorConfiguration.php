@@ -15,7 +15,7 @@ use Pheanstalk\Pheanstalk;
 use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use wenbinye\tars\server\Config;
-use winwin\jobQueue\listener\StartJobProcessor;
+use winwin\jobQueue\listener\StartJobDispatcher;
 use winwin\jobQueue\servant\JobStatServant;
 
 /**
@@ -67,7 +67,7 @@ class JobProcessorConfiguration implements DefinitionConfiguration
         LoggerFactoryInterface $loggerFactory,
         array $beanstalkConfig,
         array $config
-    ): JobProcessor {
+    ): JobDispatcher {
         $tubeList = [];
         foreach ($this->getWorkers($config, $beanstalkConfig['tube'] ?? 'default') as $tube => $num) {
             $tubeList[] = array_fill(0, $num, $tube);
@@ -78,18 +78,18 @@ class JobProcessorConfiguration implements DefinitionConfiguration
             $beanstalk->watchOnly($tubeList[$workerId]);
             return $beanstalk;
         };
-        $jobProcessor = new JobProcessor($container, $jobStatService, $eventDispatcher, $beanstalkFactory, count($tubeList));
-        $jobProcessor->setLogger($loggerFactory->create(JobProcessor::class));
+        $jobProcessor = new JobDispatcher($container, $jobStatService, $eventDispatcher, $beanstalkFactory, count($tubeList));
+        $jobProcessor->setLogger($loggerFactory->create(JobDispatcher::class));
         return $jobProcessor;
     }
 
     /**
      * @Bean()
      */
-    public function startJobProcessor(JobProcessor $jobProcessor, LoggerFactoryInterface $loggerFactory): StartJobProcessor
+    public function startJobProcessor(JobDispatcher $jobProcessor, LoggerFactoryInterface $loggerFactory): StartJobDispatcher
     {
-        $listener = new StartJobProcessor($jobProcessor);
-        $listener->setLogger($loggerFactory->create(StartJobProcessor::class));
+        $listener = new StartJobDispatcher($jobProcessor);
+        $listener->setLogger($loggerFactory->create(StartJobDispatcher::class));
         return $listener;
     }
 

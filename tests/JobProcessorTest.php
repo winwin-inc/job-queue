@@ -8,7 +8,7 @@ class JobProcessorTest extends TestCase
 {
     public function createProcessor()
     {
-        $processor = new JobProcessor(
+        $processor = new JobDispatcher(
             $eventDispatcher = new EventDispatcher(),
             $this->pidfile = __DIR__.'/queue.pid'
         );
@@ -28,7 +28,7 @@ class JobProcessorTest extends TestCase
 
         $pid = pcntl_fork();
         if ($pid > 0) {
-            $this->queue->put(TestJob::class, $args = [
+            $this->queue->put(TestJobOption::class, $args = [
                 'file' => $tmpfile = tempnam(sys_get_temp_dir(), 'job')
             ]);
             usleep(100000);
@@ -52,7 +52,7 @@ class JobProcessorTest extends TestCase
 
         $pid = pcntl_fork();
         if ($pid > 0) {
-            $this->queue->put(TestJob::class, $args = []);
+            $this->queue->put(TestJobOption::class, $args = []);
             usleep(100000);
             $this->assertTrue(file_exists($this->pidfile));
             $processor->stop();

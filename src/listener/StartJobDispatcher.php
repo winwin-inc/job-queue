@@ -9,29 +9,29 @@ use kuiper\swoole\event\BootstrapEvent;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Swoole\Process;
-use winwin\jobQueue\JobProcessor;
+use winwin\jobQueue\JobDispatcher;
 
 /**
  * Class StartJobProcessor
  * @package winwin\jobQueue\listener
  * @EventListener()
  */
-class StartJobProcessor implements EventListenerInterface, LoggerAwareInterface
+class StartJobDispatcher implements EventListenerInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
     protected const TAG = '[' . __CLASS__ . '] ';
 
     /**
-     * @var JobProcessor
+     * @var JobDispatcher
      */
     private $jobProcessor;
 
     /**
      * StartJobProcessor constructor.
-     * @param JobProcessor $jobProcessor
+     * @param JobDispatcher $jobProcessor
      */
-    public function __construct(JobProcessor $jobProcessor)
+    public function __construct(JobDispatcher $jobProcessor)
     {
         $this->jobProcessor = $jobProcessor;
     }

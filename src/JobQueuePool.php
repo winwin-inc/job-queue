@@ -24,12 +24,12 @@ class JobQueuePool implements JobFactoryInterface, JobQueueInterface
     /**
      * @inheritDoc
      */
-    public function create(string $handlerClass, array $arguments): JobInterface
+    public function create(JobInterface $job): JobOption
     {
-        return $this->pool->take()->create($handlerClass, $arguments);
+        return $this->pool->take()->create($job);
     }
 
-    public function put(string $jobClass, array $arguments, int $delay = 0, int $priority = 1024, int $ttr = 60, ?string $tube = null): int
+    public function put(string $jobClass, $arguments, int $delay = 0, int $priority = 1024, int $ttr = 60, ?string $tube = null): JobId
     {
         return $this->pool->take()->put($jobClass, $arguments, $delay, $priority, $ttr, $tube);
     }

@@ -14,9 +14,9 @@ composer require winwin/job-queue
 
 ```php
 <?php
-use winwin\jobQueue\JobHandlerInterface;
+use winwin\jobQueue\JobProcessorInterface;
 
-class MyJob implements JobHandlerInterface
+class MyJob implements JobProcessorInterface
 {
 public function handle(array $arguments) : void {
  // TODO: Implement handle() method.

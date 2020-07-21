@@ -4,7 +4,7 @@ namespace winwin\jobQueue;
 
 use Webmozart\Assert\Assert;
 
-class TestJob implements JobInterface
+class TestJobOption implements JobOptionInterface
 {
     public function process(array $arguments)
     {

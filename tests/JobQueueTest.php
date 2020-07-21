@@ -7,7 +7,7 @@ class JobQueueTest extends TestCase
     public function testPut()
     {
         $queue = $this->createQueue();
-        $queue->put(TestJob::class, $args = ['arg1' => 'val1']);
+        $queue->put(TestJobOption::class, $args = ['arg1' => 'val1']);
 
         $job = $queue->getBeanstalk()->peekReady();
         // print_r($job);
@@ -18,7 +18,7 @@ class JobQueueTest extends TestCase
     public function testDelete()
     {
         $queue = $this->createQueue();
-        $jobId = $queue->put(TestJob::class, $args = ['arg1' => 'val1']);
+        $jobId = $queue->put(TestJobOption::class, $args = ['arg1' => 'val1']);
         $job = $queue->getBeanstalk()->peekReady();
         // var_export($job);
 

@@ -4,40 +4,38 @@
 namespace winwin\jobQueue;
 
 use DI\Annotation\Inject;
-use function DI\get;
 use kuiper\di\annotation\Bean;
 use kuiper\di\annotation\Configuration;
-use kuiper\di\ContainerBuilderAwareTrait;
-use kuiper\di\DefinitionConfiguration;
 use kuiper\swoole\pool\PoolFactoryInterface;
-use Pheanstalk\Pheanstalk;
+use wenbinye\tars\rpc\TarsClientFactoryInterface;
+use winwin\jobQueue\integration\JobQueueServant;
 
 /**
  * @Configuration()
  */
-class JobQueueConfiguration implements DefinitionConfiguration
+class JobQueueConfiguration
 {
-    use ContainerBuilderAwareTrait;
-
-    public function getDefinitions(): array
-    {
-        return [
-            JobFactoryInterface::class => get(JobQueueInterface::class)
-        ];
-    }
-
     /**
      * @Bean()
-     * @Inject({"config": "application.beanstalk"})
+     * @Inject({"config": "application.beanstalk", "jobQueueServerName": "application.tars.servers.job-queue-server"})
      */
-    public function jobQueue(PoolFactoryInterface $poolFactory, array $config): JobQueueInterface
+    public function jobQueue(
+        TarsClientFactoryInterface $tarsClientFactory,
+        PoolFactoryInterface $poolFactory,
+        ?string $jobQueueServerName,
+        array $config
+    ): JobQueueInterface
     {
-        return new JobQueuePool($poolFactory->create("job-queue", static function () use ($config) {
-            $beanstalk = Pheanstalk::create($config['host'], $config['port'] ?? 11300);
-            if (isset($config['tube'])) {
-                $beanstalk->useTube($config['tube']);
+        return new JobQueuePool($poolFactory->create("job-queue", static function () use ($tarsClientFactory, $config, $jobQueueServerName) {
+            $jobQueue = new JobQueue($config);
+            if ($jobQueueServerName) {
+                /** @noinspection PhpParamsInspection */
+                $jobQueue->setJobQueueServant($tarsClientFactory->create(
+                    JobQueueServant::class,
+                    $jobQueueServerName . ".JobQueueObj"
+                ));
             }
-            return new JobQueue($beanstalk);
+            return $jobQueue;
         }));
     }
 }

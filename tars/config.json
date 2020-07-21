@@ -1,0 +1,10 @@
+{
+    "packages": {
+        "winwin/job-queue-server": {
+            "revision": "master",
+            "files": [
+                "JobQueue.tars"
+            ]
+        }
+    }
+}
