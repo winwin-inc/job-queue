@@ -24,6 +24,11 @@ trait JobTrait
                 $this->{$field} = $value;
             }
         }
+        $this->initialize();
+    }
+
+    private function initialize(): void
+    {
     }
 
     public function jsonSerialize()
