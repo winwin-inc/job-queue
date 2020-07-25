@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue\listener;
 
@@ -12,46 +13,53 @@ use Swoole\Process;
 use winwin\jobQueue\JobConsumerPool;
 
 /**
- * Class StartJobProcessor
- * @package winwin\jobQueue\listener
  * @EventListener()
  */
 class StartJobConsumer implements EventListenerInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    protected const TAG = '[' . __CLASS__ . '] ';
+    protected const TAG = '['.__CLASS__.'] ';
 
     /**
      * @var JobConsumerPool
      */
-    private $jobProcessor;
+    private $jobConsumerPool;
+
+    /**
+     * @var int
+     */
+    private $pid;
 
     /**
      * StartJobProcessor constructor.
-     * @param JobConsumerPool $jobProcessor
      */
     public function __construct(JobConsumerPool $jobProcessor)
     {
-        $this->jobProcessor = $jobProcessor;
+        $this->jobConsumerPool = $jobProcessor;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      *
      * @param BootstrapEvent
      */
     public function __invoke($event): void
     {
         $process = new Process(function () {
-            $this->jobProcessor->start();
+            $this->jobConsumerPool->start();
         });
-        $pid = $process->start();
-        $this->logger->info(static::TAG . 'start job processor', ['pid' => $pid]);
+        $this->pid = $process->start();
+        $this->logger->info(static::TAG.'start job processor', ['pid' => $this->pid]);
+    }
+
+    public function getJobConsumerPid(): int
+    {
+        return $this->pid;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function getSubscribedEvent(): string
     {

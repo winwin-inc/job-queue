@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -17,8 +18,6 @@ class JobId
 
     /**
      * JobId constructor.
-     * @param string $jobType
-     * @param int $jobId
      */
     public function __construct(string $jobType, int $jobId)
     {
@@ -28,7 +27,7 @@ class JobId
 
     public function getId(): string
     {
-        return $this->jobType . ':' . $this->jobId;
+        return $this->jobType.':'.$this->jobId;
     }
 
     public function __toString()
@@ -38,10 +37,11 @@ class JobId
 
     public static function fromString(string $jobId): JobId
     {
-        $part = explode(":", $jobId, 2);
+        $part = explode(':', $jobId, 2);
         if (2 !== count($part) || !is_numeric($part[1]) || !JobType::hasValue($part[0])) {
             throw new \InvalidArgumentException("'$jobId' is not a valid job id, should match type:id");
         }
-        return new self($part[0], (int)$part[1]);
+
+        return new self($part[0], (int) $part[1]);
     }
 }

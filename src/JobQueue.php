@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace winwin\jobQueue;
 
 use Pheanstalk\Exception\ServerException;
@@ -7,7 +9,7 @@ use Pheanstalk\Pheanstalk;
 use winwin\jobQueue\integration\Job;
 use winwin\jobQueue\integration\JobQueueServant;
 
-class JobQueue implements JobFactoryInterface, JobQueueInterface
+class JobQueue implements JobQueueInterface
 {
     /**
      * @var array
@@ -28,20 +30,17 @@ class JobQueue implements JobFactoryInterface, JobQueueInterface
         $this->options = $options + [
                 'host' => 'localhost',
                 'port' => 11300,
-                'tube' => 'default'
+                'tube' => 'default',
             ];
     }
 
-    /**
-     * @param JobQueueServant|null $jobQueueServant
-     */
     public function setJobQueueServant(?JobQueueServant $jobQueueServant): void
     {
         $this->jobQueueServant = $jobQueueServant;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function create(JobInterface $job): JobOption
     {
@@ -49,7 +48,7 @@ class JobQueue implements JobFactoryInterface, JobQueueInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function put(
         string $jobClass,
@@ -64,7 +63,8 @@ class JobQueue implements JobFactoryInterface, JobQueueInterface
                 $id = $this->getBeanstalk()->put(json_encode([
                     'job' => $jobClass,
                     'payload' => $arguments,
-                ], JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE), $priority, $delay, $ttr)->getId();
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), $priority, $delay, $ttr)->getId();
+
                 return new JobId(JobType::NORMAL, $id);
             } catch (ServerException $e) {
                 if (!$this->jobQueueServant) {
@@ -78,11 +78,13 @@ class JobQueue implements JobFactoryInterface, JobQueueInterface
                 $jobDto->delay = $delay;
                 $jobDto->tube = $tube ?? $this->options['tube'];
                 $jobDto->serverHost = $this->options['host'];
-                $jobDto->serverPort = (int)$this->options['port'];
+                $jobDto->serverPort = (int) $this->options['port'];
                 $id = $this->jobQueueServant->put($jobDto);
+
                 return new JobId(JobType::PENDING, $id);
             }
         };
+
         return $tube ? $this->getBeanstalk()->withUsedTube($tube, $put) : $put();
     }
 
@@ -93,6 +95,7 @@ class JobQueue implements JobFactoryInterface, JobQueueInterface
             $beanstalk->useTube($this->options['tube']);
             $this->beanstalk = $beanstalk;
         }
+
         return $this->beanstalk;
     }
 }

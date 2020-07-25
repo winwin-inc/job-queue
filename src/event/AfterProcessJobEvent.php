@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue\event;
 
@@ -14,16 +15,12 @@ class AfterProcessJobEvent
 
     /**
      * AfterProcessJobEvent constructor.
-     * @param BeanstalkJob $job
      */
     public function __construct(BeanstalkJob $job)
     {
         $this->job = $job;
     }
 
-    /**
-     * @return BeanstalkJob
-     */
     public function getJob(): BeanstalkJob
     {
         return $this->job;

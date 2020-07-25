@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue\event;
 
@@ -24,9 +25,6 @@ class BeanstalkErrorEvent
         $this->job = $job;
     }
 
-    /**
-     * @return Exception
-     */
     public function getError(): Exception
     {
         return $this->error;

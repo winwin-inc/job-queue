@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue\event;
 
@@ -23,17 +24,11 @@ class JobFailedEvent
         $this->job = $job;
     }
 
-    /**
-     * @return \Throwable
-     */
     public function getError(): \Throwable
     {
         return $this->error;
     }
 
-    /**
-     * @return Job
-     */
     public function getJob(): Job
     {
         return $this->job;

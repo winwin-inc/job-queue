@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -10,14 +11,13 @@ use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
-use Swoole\Process;
 use Swoole\Process\Pool;
 
 class JobConsumerPool implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    protected const TAG = '[' . __CLASS__ . '] ';
+    protected const TAG = '['.__CLASS__.'] ';
 
     /**
      * @var ContainerInterface
@@ -78,10 +78,10 @@ class JobConsumerPool implements LoggerAwareInterface
 
     public function start(): void
     {
-        $this->logger->info(static::TAG . 'start job queue processor');
+        $this->logger->info(static::TAG.'start job queue processor');
         Coroutine::disable();
         $pool = new Pool($this->workerNum);
-        $pool->on("WorkerStart", function ($pool, $workerId) {
+        $pool->on('WorkerStart', function ($pool, $workerId) {
             $this->createConsumer($pool, $workerId)->start();
         });
         $pool->start();

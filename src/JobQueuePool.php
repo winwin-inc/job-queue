@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -14,7 +15,6 @@ class JobQueuePool implements JobQueueInterface
 
     /**
      * JobQueuePool constructor.
-     * @param PoolInterface $pool
      */
     public function __construct(PoolInterface $pool)
     {
@@ -22,7 +22,7 @@ class JobQueuePool implements JobQueueInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function create(JobInterface $job): JobOption
     {

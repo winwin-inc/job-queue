@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -16,7 +17,7 @@ trait JobTrait
     public function __construct($arguments)
     {
         if (!is_array($arguments)) {
-            throw new \InvalidArgumentException("expect an array, got " . gettype($arguments));
+            throw new \InvalidArgumentException('expect an array, got '.gettype($arguments));
         }
         foreach ($arguments as $name => $value) {
             $field = lcfirst(Text::camelCase($name));

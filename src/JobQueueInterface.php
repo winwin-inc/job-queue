@@ -1,25 +1,18 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
 interface JobQueueInterface
 {
     /**
-     * Creates the job instance
-     *
-     * @return JobOption
+     * Creates the job instance.
      */
     public function create(JobInterface $job): JobOption;
 
     /**
-     * @param string $jobClass
      * @param mixed $arguments
-     * @param int $delay
-     * @param int $priority
-     * @param int $ttr
-     * @param string|null $tube
-     * @return JobId
      */
     public function put(
         string $jobClass,

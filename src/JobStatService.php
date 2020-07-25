@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -25,18 +26,18 @@ class JobStatService implements JobStatServant
     public function __construct(int $size = 256, int $healthyInterval = 60)
     {
         $table = new Table($size);
-        $table->column("pid", Table::TYPE_INT);
-        $table->column("worker_id", Table::TYPE_INT);
-        $table->column("heartbeat", Table::TYPE_INT);
-        $table->column("success", Table::TYPE_INT);
-        $table->column("failure", Table::TYPE_INT);
+        $table->column('pid', Table::TYPE_INT);
+        $table->column('worker_id', Table::TYPE_INT);
+        $table->column('heartbeat', Table::TYPE_INT);
+        $table->column('success', Table::TYPE_INT);
+        $table->column('failure', Table::TYPE_INT);
         $table->column('window1', Table::TYPE_INT);
         $table->column('window15', Table::TYPE_INT);
-        $table->column("success1", Table::TYPE_INT);
-        $table->column("failure1", Table::TYPE_INT);
-        $table->column("success15", Table::TYPE_INT);
-        $table->column("failure15", Table::TYPE_INT);
-        $table->column("ttr", Table::TYPE_INT, 8);
+        $table->column('success1', Table::TYPE_INT);
+        $table->column('failure1', Table::TYPE_INT);
+        $table->column('success15', Table::TYPE_INT);
+        $table->column('failure15', Table::TYPE_INT);
+        $table->column('ttr', Table::TYPE_INT, 8);
         $table->create();
         $this->table = $table;
         $this->healthyInterval = $healthyInterval;
@@ -47,7 +48,7 @@ class JobStatService implements JobStatServant
         $this->table->set((string) $workerId, [
             'worker_id' => $workerId,
             'pid' => $pid,
-            'heartbeat' => time()
+            'heartbeat' => time(),
         ]);
     }
 
@@ -77,19 +78,19 @@ class JobStatService implements JobStatServant
 
     private function addWindow(string $key, int $windowSize, string $field): void
     {
-        $window = (int)(time() / (60*$windowSize));
-        if ($window == $this->table->get($key, 'window' . $windowSize)) {
-            $this->table->incr($key, $field . $windowSize);
+        $window = (int) (time() / (60 * $windowSize));
+        if ($window == $this->table->get($key, 'window'.$windowSize)) {
+            $this->table->incr($key, $field.$windowSize);
         } else {
             $this->table->set($key, [
-                $field . $windowSize => 1,
-                'window'. $windowSize => $window
+                $field.$windowSize => 1,
+                'window'.$windowSize => $window,
             ]);
         }
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function stat()
     {
@@ -101,25 +102,27 @@ class JobStatService implements JobStatServant
         }
 
         foreach (['activeWorkers', 'successCount', 'failureCount', 'successCount1m', 'failureCount1m',
-                     'successCount15m', 'failureCount15m'] as $field) {
+                     'successCount15m', 'failureCount15m', ] as $field) {
             $jobStat->$field = array_sum(Arrays::pullField($workerStat, $field));
         }
         $timeArray = array_filter(Arrays::pullField($workerStat, 'averageTime'), function ($time) {
             return $time > 0;
         });
-        $jobStat->averageTime = empty($timeArray) ? -1 : (int) (array_sum($timeArray)/count($timeArray));
+        $jobStat->averageTime = empty($timeArray) ? -1 : (int) (array_sum($timeArray) / count($timeArray));
+
         return $jobStat;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritdoc}
      */
     public function statWorker($workerId)
     {
-        $row = $this->table->get((string)$workerId);
+        $row = $this->table->get((string) $workerId);
         if (!$row) {
             return null;
         }
+
         return $this->toJobStat($row);
     }
 
@@ -135,6 +138,7 @@ class JobStatService implements JobStatServant
         $jobStat->successCount15m = $row['success15'];
         $jobStat->failureCount15m = $row['success15'];
         $jobStat->averageTime = ($jobStat->successCount > 0 ? $row['ttr'] / $row['success'] : -1);
+
         return $jobStat;
     }
 }

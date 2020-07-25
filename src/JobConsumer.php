@@ -1,8 +1,8 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
-
 
 use kuiper\annotations\AnnotationReaderInterface;
 use Pheanstalk\Exception as BeanstalkException;
@@ -23,7 +23,7 @@ class JobConsumer implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    protected const TAG = '[' . __CLASS__ . '] ';
+    protected const TAG = '['.__CLASS__.'] ';
 
     /**
      * @var ContainerInterface
@@ -77,8 +77,8 @@ class JobConsumer implements LoggerAwareInterface
         AnnotationReaderInterface $annotationReader,
         JobStatService $jobStatService,
         EventDispatcherInterface $eventDispatcher,
-        int $sleepInterval)
-    {
+        int $sleepInterval
+    ) {
         $this->annotationReader = $annotationReader;
         $this->jobStatService = $jobStatService;
         $this->eventDispatcher = $eventDispatcher;
@@ -91,9 +91,8 @@ class JobConsumer implements LoggerAwareInterface
 
     public function start(): void
     {
-
-        @cli_set_process_title($this->consumerName . " worker $this->workerId on "
-            . implode(",", $this->beanstalk->listTubesWatched()));
+        @cli_set_process_title($this->consumerName." worker $this->workerId on "
+            .implode(',', $this->beanstalk->listTubesWatched()));
         $this->jobStatService->register($this->workerId, getmypid());
         while (!$this->stopped) {
             $job = $this->grabJob();
@@ -108,25 +107,25 @@ class JobConsumer implements LoggerAwareInterface
                 $this->handle($job);
                 $action = 'delete';
                 $this->jobStatService->success($this->workerId, (microtime(true) - $startTime) * 1000);
-                $this->logger->info(static::TAG . 'job process successfully', ['worker' => $this->workerId, 'job_id' => $job->getId()]);
+                $this->logger->info(static::TAG.'job process successfully', ['worker' => $this->workerId, 'job_id' => $job->getId()]);
             } catch (RetryException $e) {
                 $action = 'release';
                 $args = [$e->getPriority(), $e->getDelay()];
-                $this->logger->warning(static::TAG . 'retry job', ['job_id' => $job->getId(), 'delay' => $e->getDelay()]);
+                $this->logger->warning(static::TAG.'retry job', ['job_id' => $job->getId(), 'delay' => $e->getDelay()]);
             } catch (\Throwable $e) {
                 $this->eventDispatcher->dispatch(new JobFailedEvent($e, $job));
                 $this->jobStatService->failure($this->workerId);
                 $action = 'bury';
-                $this->logger->error(static::TAG . 'job process failed: ' . $e, [
+                $this->logger->error(static::TAG.'job process failed: '.$e, [
                     'job_id' => $job->getId(),
-                    'data' => $job->getData()
+                    'data' => $job->getData(),
                 ]);
             }
             try {
                 call_user_func_array([$this->beanstalk, $action], array_merge([$job], $args));
             } catch (BeanstalkException $e) {
                 $this->eventDispatcher->dispatch(new BeanstalkErrorEvent($e, $job));
-                $this->logger->error(static::TAG . "beanstalk $action failed", ['job_id' => $job->getId()]);
+                $this->logger->error(static::TAG."beanstalk $action failed", ['job_id' => $job->getId()]);
             }
         }
     }
@@ -156,18 +155,18 @@ class JobConsumer implements LoggerAwareInterface
         if ($annotation) {
             $jobProcessorClass = $annotation->value;
         } else {
-            $jobProcessorClass = $data['job'] . 'Processor';
+            $jobProcessorClass = $data['job'].'Processor';
         }
-        $this->logger->info(static::TAG . 'handle job', [
-            'job' => $data['job'], 'processor' => $jobProcessorClass, 'job_id' => $job->getId()]);
+        $this->logger->info(static::TAG.'handle job', [
+            'job' => $data['job'], 'processor' => $jobProcessorClass, 'job_id' => $job->getId(), ]);
         if (!$this->container->has($jobProcessorClass)) {
             throw new \UnexpectedValueException("Job processor $jobProcessorClass does not exist");
         }
         $handler = $this->container->get($jobProcessorClass);
         if (!$handler instanceof JobProcessorInterface) {
-            throw new \UnexpectedValueException("job {$data['job']} does not implement " . JobProcessorInterface::class);
+            throw new \UnexpectedValueException("job {$data['job']} does not implement ".JobProcessorInterface::class);
         }
-        /** @noinspection PhpParamsInspection */
+        /* @noinspection PhpParamsInspection */
         $handler->process($jobClass->newInstance($data['payload']));
 
         $this->eventDispatcher->dispatch(new AfterProcessJobEvent($job));
@@ -179,8 +178,9 @@ class JobConsumer implements LoggerAwareInterface
             return $this->beanstalk->reserveWithTimeout(1);
         } catch (BeanstalkException $e) {
             $this->eventDispatcher->dispatch(new BeanstalkErrorEvent($e, null));
-            $this->logger->error(static::TAG . 'beanstalk reserve failed');
+            $this->logger->error(static::TAG.'beanstalk reserve failed');
             sleep($this->sleepInterval);
+
             return null;
         }
     }

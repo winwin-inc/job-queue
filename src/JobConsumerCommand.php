@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -16,18 +17,20 @@ class JobConsumerCommand extends ConsoleCommand
 {
     /**
      * @Inject()
+     *
      * @var JobConsumerPool
      */
     private $jobConsumerPool;
 
     protected function configure()
     {
-        $this->setDescription("Start consumer");
+        $this->setDescription('Start consumer');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->jobConsumerPool->start();
+
         return 0;
     }
 }

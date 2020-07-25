@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -17,7 +18,6 @@ use Pheanstalk\Pheanstalk;
 use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use wenbinye\tars\server\Config;
-use wenbinye\tars\server\ServerProperties;
 use winwin\jobQueue\listener\StartJobConsumer;
 use winwin\jobQueue\servant\JobStatServant;
 
@@ -32,20 +32,20 @@ class JobProcessorConfiguration implements DefinitionConfiguration
     public function getDefinitions(): array
     {
         $properties = Config::getInstance();
-        if ($properties->getBool("application.job-processor.enabled")) {
+        if ($properties->getBool('application.job-processor.enabled')) {
             $properties->merge([
                 'application' => [
                     'tars' => [
                         'servants' => [
-                            'JobStatObj' => JobStatServant::class
-                        ]
-                    ]
-                ]
+                            'JobStatObj' => JobStatServant::class,
+                        ],
+                    ],
+                ],
             ]);
         }
 
         return [
-            JobStatServant::class => get(JobStatService::class)
+            JobStatServant::class => get(JobStatService::class),
         ];
     }
 
@@ -56,6 +56,7 @@ class JobProcessorConfiguration implements DefinitionConfiguration
     public function jobStatService(array $config): JobStatService
     {
         $workers = $this->getWorkers($config);
+
         return new JobStatService(array_sum($workers), $config['heartbeat-interval'] ?? 60);
     }
 
@@ -81,6 +82,7 @@ class JobProcessorConfiguration implements DefinitionConfiguration
         $beanstalkFactory = static function ($workerId) use ($tubeList, $beanstalkConfig) {
             $beanstalk = Pheanstalk::create($beanstalkConfig['host'], $beanstalkConfig['port'] ?? 11300);
             $beanstalk->watchOnly($tubeList[$workerId]);
+
             return $beanstalk;
         };
         $jobProcessor = new JobConsumerPool(
@@ -93,6 +95,7 @@ class JobProcessorConfiguration implements DefinitionConfiguration
             count($tubeList)
         );
         $jobProcessor->setLogger($loggerFactory->create(JobConsumerPool::class));
+
         return $jobProcessor;
     }
 
@@ -103,6 +106,7 @@ class JobProcessorConfiguration implements DefinitionConfiguration
     {
         $listener = new StartJobConsumer($jobProcessor);
         $listener->setLogger($loggerFactory->create(StartJobConsumer::class));
+
         return $listener;
     }
 
@@ -113,8 +117,9 @@ class JobProcessorConfiguration implements DefinitionConfiguration
         } elseif (is_array($config['workers'])) {
             $workers = $config['workers'];
         } else {
-            $workers[$defaultTube] = (int)$config['workers'];
+            $workers[$defaultTube] = (int) $config['workers'];
         }
+
         return $workers;
     }
 }

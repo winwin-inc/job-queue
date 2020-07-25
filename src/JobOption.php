@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace winwin\jobQueue;
 
 final class JobOption
@@ -41,6 +43,7 @@ final class JobOption
     public function priority(int $priority): self
     {
         $this->priority = $priority;
+
         return $this;
     }
 
@@ -61,6 +64,7 @@ final class JobOption
     public function delay(int $delaySeconds): self
     {
         $this->delay = $delaySeconds;
+
         return $this;
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+declare(strict_types=1);
 
 namespace winwin\jobQueue;
 
@@ -24,17 +25,17 @@ class JobQueueConfiguration
         PoolFactoryInterface $poolFactory,
         ?string $jobQueueServerName,
         array $config
-    ): JobQueueInterface
-    {
-        return new JobQueuePool($poolFactory->create("job-queue", static function () use ($tarsClientFactory, $config, $jobQueueServerName) {
+    ): JobQueueInterface {
+        return new JobQueuePool($poolFactory->create('job-queue', static function () use ($tarsClientFactory, $config, $jobQueueServerName) {
             $jobQueue = new JobQueue($config);
             if ($jobQueueServerName) {
-                /** @noinspection PhpParamsInspection */
+                /* @noinspection PhpParamsInspection */
                 $jobQueue->setJobQueueServant($tarsClientFactory->create(
                     JobQueueServant::class,
-                    $jobQueueServerName . ".JobQueueObj"
+                    $jobQueueServerName.'.JobQueueObj'
                 ));
             }
+
             return $jobQueue;
         }));
     }
