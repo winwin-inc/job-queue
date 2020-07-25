@@ -5,17 +5,20 @@ namespace winwin\jobQueue;
 
 use DI\Annotation\Inject;
 use function DI\get;
+use kuiper\annotations\AnnotationReaderInterface;
 use kuiper\di\annotation\Bean;
 use kuiper\di\annotation\ConditionalOnProperty;
 use kuiper\di\annotation\Configuration;
 use kuiper\di\ContainerBuilderAwareTrait;
 use kuiper\di\DefinitionConfiguration;
 use kuiper\logger\LoggerFactoryInterface;
+use kuiper\swoole\ServerConfig;
 use Pheanstalk\Pheanstalk;
 use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use wenbinye\tars\server\Config;
-use winwin\jobQueue\listener\StartJobDispatcher;
+use wenbinye\tars\server\ServerProperties;
+use winwin\jobQueue\listener\StartJobConsumer;
 use winwin\jobQueue\servant\JobStatServant;
 
 /**
@@ -60,14 +63,16 @@ class JobProcessorConfiguration implements DefinitionConfiguration
      * @Bean()
      * @Inject({"beanstalkConfig": "application.beanstalk", "config": "application.job-processor"})
      */
-    public function jobProcessor(
+    public function jobConsumerPool(
+        ServerConfig $serverConfig,
         ContainerInterface $container,
         JobStatService $jobStatService,
+        AnnotationReaderInterface $annotationReader,
         EventDispatcherInterface $eventDispatcher,
         LoggerFactoryInterface $loggerFactory,
         array $beanstalkConfig,
         array $config
-    ): JobDispatcher {
+    ): JobConsumerPool {
         $tubeList = [];
         foreach ($this->getWorkers($config, $beanstalkConfig['tube'] ?? 'default') as $tube => $num) {
             $tubeList[] = array_fill(0, $num, $tube);
@@ -78,18 +83,26 @@ class JobProcessorConfiguration implements DefinitionConfiguration
             $beanstalk->watchOnly($tubeList[$workerId]);
             return $beanstalk;
         };
-        $jobProcessor = new JobDispatcher($container, $jobStatService, $eventDispatcher, $beanstalkFactory, count($tubeList));
-        $jobProcessor->setLogger($loggerFactory->create(JobDispatcher::class));
+        $jobProcessor = new JobConsumerPool(
+            $serverConfig->getServerName(),
+            $container,
+            $jobStatService,
+            $annotationReader,
+            $eventDispatcher,
+            $beanstalkFactory,
+            count($tubeList)
+        );
+        $jobProcessor->setLogger($loggerFactory->create(JobConsumerPool::class));
         return $jobProcessor;
     }
 
     /**
      * @Bean()
      */
-    public function startJobProcessor(JobDispatcher $jobProcessor, LoggerFactoryInterface $loggerFactory): StartJobDispatcher
+    public function startJobConsumer(JobConsumerPool $jobProcessor, LoggerFactoryInterface $loggerFactory): StartJobConsumer
     {
-        $listener = new StartJobDispatcher($jobProcessor);
-        $listener->setLogger($loggerFactory->create(StartJobDispatcher::class));
+        $listener = new StartJobConsumer($jobProcessor);
+        $listener->setLogger($loggerFactory->create(StartJobConsumer::class));
         return $listener;
     }
 

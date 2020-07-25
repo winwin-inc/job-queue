@@ -8,7 +8,7 @@ class JobProcessorTest extends TestCase
 {
     public function createProcessor()
     {
-        $processor = new JobDispatcher(
+        $processor = new JobConsumerPool(
             $eventDispatcher = new EventDispatcher(),
             $this->pidfile = __DIR__.'/queue.pid'
         );
