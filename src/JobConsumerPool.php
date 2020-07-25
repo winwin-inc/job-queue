@@ -78,6 +78,7 @@ class JobConsumerPool implements LoggerAwareInterface
 
     public function start(): void
     {
+        @cli_set_process_title($this->consumerName.' master');
         $this->logger->info(static::TAG.'start job queue processor');
         Coroutine::disable();
         $pool = new Pool($this->workerNum);

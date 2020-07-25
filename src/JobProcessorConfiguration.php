@@ -19,6 +19,7 @@ use Psr\Container\ContainerInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use wenbinye\tars\server\Config;
 use winwin\jobQueue\listener\StartJobConsumer;
+use winwin\jobQueue\listener\StopJobConsumer;
 use winwin\jobQueue\servant\JobStatServant;
 
 /**
@@ -106,6 +107,17 @@ class JobProcessorConfiguration implements DefinitionConfiguration
     {
         $listener = new StartJobConsumer($jobProcessor);
         $listener->setLogger($loggerFactory->create(StartJobConsumer::class));
+
+        return $listener;
+    }
+
+    /**
+     * @Bean()
+     */
+    public function stopJobConsumer(StartJobConsumer $startJobConsumer, LoggerFactoryInterface $loggerFactory): StopJobConsumer
+    {
+        $listener = new StopJobConsumer($startJobConsumer);
+        $listener->setLogger($loggerFactory->create(StopJobConsumer::class));
 
         return $listener;
     }

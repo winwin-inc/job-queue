@@ -50,7 +50,7 @@ class StartJobConsumer implements EventListenerInterface, LoggerAwareInterface
             $this->jobConsumerPool->start();
         });
         $this->pid = $process->start();
-        $this->logger->info(static::TAG.'start job processor', ['pid' => $this->pid]);
+        $this->logger->info(static::TAG.'start job consumer', ['pid' => $this->pid]);
     }
 
     public function getJobConsumerPid(): int

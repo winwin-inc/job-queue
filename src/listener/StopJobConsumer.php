@@ -27,13 +27,23 @@ class StopJobConsumer implements EventListenerInterface, LoggerAwareInterface
     private $startJobConsumer;
 
     /**
+     * StopJobConsumer constructor.
+     */
+    public function __construct(StartJobConsumer $startJobConsumer)
+    {
+        $this->startJobConsumer = $startJobConsumer;
+    }
+
+    /**
      * {@inheritdoc}
      *
      * @param BootstrapEvent
      */
     public function __invoke($event): void
     {
-        Process::kill($this->startJobConsumer->getJobConsumerPid());
+        $pid = $this->startJobConsumer->getJobConsumerPid();
+        $this->logger->info(static::TAG.'stop job consumer', ['pid' => $pid]);
+        Process::kill($pid);
     }
 
     /**
